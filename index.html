@@ -179,6 +179,7 @@
   .cp.done::after,.cp.fail::after{content:"Copié";position:absolute;right:calc(100% + 5px);top:50%;transform:translateY(-50%);background:#20252a;border:1px solid var(--line2);color:var(--tx);font-size:11px;padding:1px 7px;border-radius:5px;white-space:nowrap;pointer-events:none;font-family:Inter,system-ui,sans-serif}
   .cp.fail::after{content:"Copie impossible"}
   .cp.in{margin-left:4px}
+  #panel h2 .cp{vertical-align:2px}
   .cp.in.done::after,.cp.in.fail::after{right:auto;left:calc(100% + 5px)}
 
   /* Vues secondaires */
@@ -571,7 +572,7 @@ function stSelect(r, field){
     + '</select>';
 }
 function rowHtml(r, idx){
-  return '<tr data-i="'+idx+'" style="'+(hud(F_COLORS[r.validation_sellsy]) ? '--rowc:'+hud(F_COLORS[r.validation_sellsy]).c+';--rowa:'+hud(F_COLORS[r.validation_sellsy]).ra : '')+'"><td title="'+esc(TABS[r.source_tab]||r.source_tab)+'">'+esc(r.sheet_row)+'</td><td title="'+esc(r.nom_entreprise)+'"><b>'+esc(r.nom_entreprise)+'</b></td><td class="em" title="'+esc(r.email)+'">'+esc(r.email)+cpBtn(r.email)+'</td><td title="'+esc(r.media_cible)+'">'+esc(r.media_cible)+'</td><td>'+stSelect(r,'validation_sellsy')+'</td><td>'+stSelect(r,'statut_suivi')+'</td><td>'+frDate(r.date_accroche)+'</td><td>'+esc(r.nb_relances)+'</td><td class="n" title="'+esc(r.rdv_notes)+'">'+esc(r.rdv_notes)+'</td></tr>';
+  return '<tr data-i="'+idx+'" style="'+(hud(F_COLORS[r.validation_sellsy]) ? '--rowc:'+hud(F_COLORS[r.validation_sellsy]).c+';--rowa:'+hud(F_COLORS[r.validation_sellsy]).ra : '')+'"><td title="'+esc(TABS[r.source_tab]||r.source_tab)+'">'+esc(r.sheet_row)+'</td><td class="em" title="'+esc(r.nom_entreprise)+'"><b>'+esc(r.nom_entreprise)+'</b>'+cpBtn(r.nom_entreprise, false, true)+'</td><td class="em" title="'+esc(r.email)+'">'+esc(r.email)+cpBtn(r.email)+'</td><td title="'+esc(r.media_cible)+'">'+esc(r.media_cible)+'</td><td>'+stSelect(r,'validation_sellsy')+'</td><td>'+stSelect(r,'statut_suivi')+'</td><td>'+frDate(r.date_accroche)+'</td><td>'+esc(r.nb_relances)+'</td><td class="n" title="'+esc(r.rdv_notes)+'">'+esc(r.rdv_notes)+'</td></tr>';
 }
 function bindRow(tr){
   tr.onclick = e => { if (e.target.closest('select,.cp')) return; openPanel(VIEW[+tr.dataset.i]); };
@@ -623,7 +624,7 @@ function opts(id, vals, cur){
 }
 async function openPanel(r){
   current = r;
-  $('p-nom').textContent = r.nom_entreprise || '';
+  $('p-nom').textContent = r.nom_entreprise || ''; $('p-nom').insertAdjacentHTML('beforeend', cpBtn(r.nom_entreprise, true, true));
   $('p-sub').textContent = (TABS[r.source_tab]||r.source_tab)+' · ligne '+r.sheet_row;
   const kv = (k,v,link) => v ? '<div class="kv"><span>'+k+' :</span> '+(link?'<a href="'+esc(/^https?:/i.test(v)?v:'https://'+v)+'" target="_blank" rel="noopener">'+esc(v)+'</a>':esc(v))+'</div>' : '';
   $('p-info').innerHTML = kv('Site',r.site_web,true)+kv('Contact',r.contact)+(r.email ? '<div class="kv"><span>Email :</span> '+esc(r.email)+' '+cpBtn(r.email, true)+'</div>' : '')+kv('Média',r.media_cible)+kv('SIREN',r.siren)+kv('Date relance (I)',frDate(r.date_relance))+kv('Nb relances (J)',r.nb_relances)+kv('Ajouté le (K)',frDate(r.date_ajout))+kv('Produit / offre',r.produit_offre)+kv('Signal commercial',r.signal_commercial)+kv('Source',r.source_url,true);
@@ -782,9 +783,10 @@ document.addEventListener('keydown', e => {
 
 /* ---------- Copier l'adresse email ---------- */
 function emailsOf(v){ const m = String(v||'').match(/[^\s,;<>()"']+@[^\s,;<>()"']+/g); return m ? [...new Set(m)].join(', ') : String(v||'').trim(); }
-function cpBtn(v, inPanel){
+function cpBtn(v, inPanel, nom){
   if (!v || !String(v).trim()) return '';
-  return '<button type="button" class="cp'+(inPanel?' in':'')+'" data-cp="'+esc(emailsOf(v))+'" title="Copier l\'adresse" aria-label="Copier l\'adresse"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button>';
+  const lab = nom ? 'Copier le nom' : 'Copier l\'adresse';
+  return '<button type="button" class="cp'+(inPanel?' in':'')+'" data-cp="'+esc(nom ? String(v).trim() : emailsOf(v))+'" title="'+lab+'" aria-label="'+lab+'"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button>';
 }
 async function copyText(t){
   try { await navigator.clipboard.writeText(t); return true; }

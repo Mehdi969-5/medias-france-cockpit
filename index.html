@@ -11,7 +11,7 @@
   :root{--bg:#f5f6f8;--card:#fff;--ink:#1d2330;--mute:#6b7280;--line:#e5e7eb;--acc:#1f4fd1;--ok:#0f7b3f;--warn:#b45309;--err:#b91c1c}
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-  header{background:#111827;color:#fff;padding:10px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header{background:#111827;color:#fff;padding:5px 14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   header h1{font-size:16px;margin:0;font-weight:600}
   header nav button{background:none;border:0;color:#cbd5e1;padding:6px 10px;cursor:pointer;font-size:14px;border-radius:6px}
   header nav button.on{background:#1f2937;color:#fff}
@@ -21,16 +21,23 @@
   .btn{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:7px 12px;cursor:pointer}
   .btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
   .btn:disabled{background:#d1d5db;color:#6b7280;cursor:not-allowed;border:0}
-  main{padding:16px 18px}
+  main{padding:8px 14px 6px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
-  .banner{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px}
+  .banner{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:6px;padding:3px 10px;margin-bottom:6px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .err{color:var(--err)} .ok{color:var(--ok)} .mute{color:var(--mute)}
-  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
-  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-  .stat{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-width:110px;cursor:pointer}
-  .stat b{display:block;font-size:18px}
-  .stat small{color:var(--mute)}
-  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center}
+  .actions .btn{padding:4px 10px;font-size:13px}
+  .stats{display:flex;gap:4px;align-items:center;flex-wrap:nowrap;overflow-x:auto;margin-bottom:6px;padding-bottom:2px;scrollbar-width:thin}
+  .stat{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border:1px solid rgba(0,0,0,.12);border-radius:11px;background:#fff;cursor:pointer;white-space:nowrap;font-size:12px;line-height:1;flex:none}
+  .stat:hover{filter:brightness(.94)}
+  .stat b{font-weight:700}
+  .stat.tot{background:#111827;color:#fff;border-color:#111827}
+  .stats .grp{font-size:11px;color:var(--mute);margin:0 2px 0 8px;flex:none;text-transform:uppercase;letter-spacing:.03em}
+  .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+  .filters select,.filters input,.ms > button{padding:4px 8px}
+  .ms > button{padding-right:26px}
+  .ms > button::after{top:4px}
+  .filters .btn{padding:4px 10px}
   select,input,textarea{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
   input[type=search]{min-width:260px}
   table{width:100%;border-collapse:collapse;background:#fff}
@@ -41,7 +48,6 @@
   tbody tr:hover td{filter:brightness(.96)}
   select.st{padding:3px 6px;border-radius:6px;border:1px solid rgba(0,0,0,.15);font-size:13px;max-width:170px;cursor:pointer}
   select.st:disabled{opacity:.6;cursor:wait}
-  .stat{border-left-width:6px}
   .ms{position:relative}
   .ms > button{font:inherit;padding:6px 28px 6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;min-width:170px;text-align:left;position:relative}
   .ms > button::after{content:'▾';position:absolute;right:9px;top:6px;color:var(--mute)}
@@ -59,7 +65,8 @@
   td.n{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute)}
   .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:12px;background:#eef2ff;color:#3730a3;white-space:nowrap}
   .tag.f{background:#ecfdf5;color:#065f46}
-  .pager{display:flex;gap:8px;align-items:center;margin-top:10px}
+  .pager{display:flex;gap:8px;align-items:center;margin-top:6px}
+  .pager .btn{padding:3px 10px}
   #login{max-width:420px;margin:60px auto}
   #login label{display:block;margin:10px 0 4px}
   #login input,#login select{width:100%}
@@ -70,7 +77,7 @@
   #panel textarea{min-height:140px}
   .kv{font-size:13px;margin:2px 0}.kv span{color:var(--mute)}
   .hidden{display:none}
-  .tablewrap{max-height:calc(100vh - 330px);overflow:auto;border:1px solid var(--line);border-radius:8px}
+  .tablewrap{max-height:calc(100vh - 230px);overflow:auto;border:1px solid var(--line);border-radius:8px}
   #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:8px;display:none;z-index:20}
 </style>
 </head>
@@ -240,6 +247,7 @@ function show(v){
   if (v==='historique' && !HIST) loadHist();
   if (v==='rdv' && !RDV) loadRdv();
   if (v==='journal') loadJournal();
+  if (v==='prospects') fitTable();
 }
 
 /* ---------- Prospects ---------- */
@@ -349,10 +357,12 @@ function filterText(){
 function stats(){
   const c = (arr, k) => arr.reduce((o,r)=>{ const v=r[k]||'(vide)'; o[v]=(o[v]||0)+1; return o; },{});
   const g = c(VIEW,'statut_suivi'), f = c(VIEW,'validation_sellsy');
-  const card = (n,l,click,col) => '<div class="stat" style="'+(col?'background:'+col+';border-left-color:'+col:'')+'" '+(click?'data-k="'+esc(click[0])+'" data-v="'+esc(click[1])+'"':'')+'><b>'+n+'</b><small>'+esc(l)+'</small></div>';
-  let h = '<div class="stat" id="st-all" title="Effacer les filtres"><b>'+VIEW.length+'</b><small>'+esc(VIEW.length===ALL.length ? 'prospects au total' : 'dans le filtre (sur '+ALL.length+')')+'</small></div>';
-  G_VALUES.forEach(v => { if (g[v]) h += card(g[v], 'G · '+v, ['G',v], G_COLORS[v]); });
-  F_VALUES.forEach(v => { if (f[v]) h += card(f[v], 'F · '+v, ['F',v], F_COLORS[v]); });
+  const card = (n,l,k,col,tip) => '<span class="stat" title="'+esc(tip)+'" style="'+(col?'background:'+col:'')+'" data-k="'+k+'" data-v="'+esc(l)+'"><b>'+n+'</b> '+esc(l)+'</span>';
+  let h = '<span class="stat tot" id="st-all" title="'+esc(VIEW.length===ALL.length ? 'Prospects au total' : 'Dans le filtre, sur '+ALL.length+' au total. Clic : effacer les filtres')+'"><b>'+VIEW.length+'</b> '+(VIEW.length===ALL.length ? 'au total' : 'sur '+ALL.length)+'</span>';
+  h += '<span class="grp">G · suivi</span>';
+  G_VALUES.forEach(v => { if (g[v]) h += card(g[v], v, 'G', G_COLORS[v], 'Statut suivi (G) : '+v+'. Clic : filtrer'); });
+  h += '<span class="grp">F · Sellsy</span>';
+  F_VALUES.forEach(v => { if (f[v]) h += card(f[v], v, 'F', F_COLORS[v], 'Validation Sellsy (F) : '+v+'. Clic : filtrer'); });
   $('stats').innerHTML = h;
   $('st-all').onclick = () => $('f-reset').click();
   $('stats').querySelectorAll('.stat[data-k]').forEach(e => e.onclick = () => setFilter(e.dataset.k, [e.dataset.v]));
@@ -386,12 +396,20 @@ function bindRow(tr){
     };
   });
 }
+function fitTable(){
+  const tw = document.querySelector('#v-prospects .tablewrap'); if (!tw || !tw.offsetParent) return;
+  const pager = document.querySelector('#v-prospects .pager');
+  const h = window.innerHeight - tw.getBoundingClientRect().top - (pager ? pager.offsetHeight + 12 : 12);
+  tw.style.maxHeight = tw.style.height = Math.max(200, h) + 'px';
+}
+window.addEventListener('resize', fitTable);
 function render(){
   const slice = VIEW.slice(page*PAGE, (page+1)*PAGE);
   $('rows').innerHTML = slice.map((r,i) => rowHtml(r, page*PAGE+i)).join('') || '<tr><td colspan="9" class="mute">Aucun prospect pour ce filtre.</td></tr>';
   $('rows').querySelectorAll('tr[data-i]').forEach(bindRow);
   const tot = VIEW.length, a = tot ? page*PAGE+1 : 0, b = Math.min(tot,(page+1)*PAGE);
   $('pinfo').textContent = a+'–'+b+' sur '+tot;
+  fitTable();
 }
 // Écriture unique (tableau et fiche) : garde-fou updated_at, trace dans mf.modifs_interface par trigger
 async function saveRow(r, p){

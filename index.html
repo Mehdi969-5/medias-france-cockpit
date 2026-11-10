@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Cockpit prospection · Médias France</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"
+        integrity="sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O" crossorigin="anonymous"></script>
+<style>
+  :root{--bg:#f5f6f8;--card:#fff;--ink:#1d2330;--mute:#6b7280;--line:#e5e7eb;--acc:#1f4fd1;--ok:#0f7b3f;--warn:#b45309;--err:#b91c1c}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:#111827;color:#fff;padding:10px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;font-weight:600}
+  header nav button{background:none;border:0;color:#cbd5e1;padding:6px 10px;cursor:pointer;font-size:14px;border-radius:6px}
+  header nav button.on{background:#1f2937;color:#fff}
+  header .sp{flex:1}
+  header .who{color:#9ca3af;font-size:12px}
+  button{font:inherit}
+  .btn{background:var(--acc);color:#fff;border:0;border-radius:6px;padding:7px 12px;cursor:pointer}
+  .btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn:disabled{background:#d1d5db;color:#6b7280;cursor:not-allowed;border:0}
+  main{padding:16px 18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .banner{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px}
+  .err{color:var(--err)} .ok{color:var(--ok)} .mute{color:var(--mute)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-width:110px;cursor:pointer}
+  .stat b{display:block;font-size:18px}
+  .stat small{color:var(--mute)}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  select,input,textarea{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  input[type=search]{min-width:260px}
+  table{width:100%;border-collapse:collapse;background:#fff}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:#f9fafb;position:sticky;top:0;font-weight:600;font-size:12px;color:#374151}
+  tbody tr{cursor:pointer}
+  tbody td{background:var(--rowbg,#fff)}
+  tbody tr:hover td{filter:brightness(.96)}
+  select.st{padding:3px 6px;border-radius:6px;border:1px solid rgba(0,0,0,.15);font-size:13px;max-width:170px;cursor:pointer}
+  select.st:disabled{opacity:.6;cursor:wait}
+  .stat{border-left-width:6px}
+  .ms{position:relative}
+  .ms > button{font:inherit;padding:6px 28px 6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;min-width:170px;text-align:left;position:relative}
+  .ms > button::after{content:'▾';position:absolute;right:9px;top:6px;color:var(--mute)}
+  .ms > button.on{border-color:var(--acc);background:#eef2ff}
+  .ms .menu{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:15;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:260px;max-width:420px}
+  .ms.open .menu{display:block}
+  .ms .menu .tools{display:flex;gap:6px;padding:8px;border-bottom:1px solid var(--line);align-items:center}
+  .ms .menu .tools input{flex:1;min-width:0;padding:4px 6px}
+  .ms .menu .tools button{font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:5px;background:#fff;cursor:pointer}
+  .ms .menu .list{max-height:320px;overflow:auto;padding:4px 0}
+  .ms .menu label{display:flex;align-items:center;gap:8px;padding:4px 10px;cursor:pointer;font-size:13px}
+  .ms .menu label:hover{background:#f3f6ff}
+  .ms .menu label .sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.15);flex:none}
+  .ms .menu label .c{margin-left:auto;color:var(--mute);font-size:12px}
+  td.n{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute)}
+  .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:12px;background:#eef2ff;color:#3730a3;white-space:nowrap}
+  .tag.f{background:#ecfdf5;color:#065f46}
+  .pager{display:flex;gap:8px;align-items:center;margin-top:10px}
+  #login{max-width:420px;margin:60px auto}
+  #login label{display:block;margin:10px 0 4px}
+  #login input,#login select{width:100%}
+  #panel{position:fixed;top:0;right:0;width:min(520px,100%);height:100%;background:#fff;border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.08);padding:18px;overflow:auto;display:none;z-index:10}
+  #panel h2{margin:0 0 4px;font-size:18px}
+  #panel label{display:block;margin:12px 0 4px;font-weight:600;font-size:13px}
+  #panel select,#panel input,#panel textarea{width:100%}
+  #panel textarea{min-height:140px}
+  .kv{font-size:13px;margin:2px 0}.kv span{color:var(--mute)}
+  .hidden{display:none}
+  .tablewrap{max-height:calc(100vh - 330px);overflow:auto;border:1px solid var(--line);border-radius:8px}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:8px 14px;border-radius:8px;display:none;z-index:20}
+</style>
+</head>
+<body>
+<header>
+  <h1>Cockpit prospection</h1>
+  <nav id="nav" class="hidden">
+    <button data-v="prospects" class="on">Prospects</button>
+    <button data-v="historique">Historique</button>
+    <button data-v="rdv">Suivi RDV</button>
+    <button data-v="journal">Journal des modifs</button>
+  </nav>
+  <div class="sp"></div>
+  <span class="who" id="who"></span>
+  <button class="btn sec hidden" id="logout">Déconnexion</button>
+</header>
+
+<main>
+  <!-- Connexion -->
+  <section id="login" class="card">
+    <h2 style="margin-top:0">Connexion</h2>
+    <p class="mute">Tape ton adresse et ton mot de passe. Tu restes connecté sur ce Chrome.</p>
+    <form id="lform" autocomplete="on">
+      <label for="lemail">Adresse</label>
+      <input id="lemail" name="username" type="email" autocomplete="username" required placeholder="ton adresse">
+      <label for="lpass">Mot de passe</label>
+      <input id="lpass" name="password" type="password" autocomplete="current-password" required>
+      <div style="margin-top:12px"><button class="btn" id="signin" type="submit">Se connecter</button></div>
+    </form>
+    <p id="lmsg" class="mute"></p>
+  </section>
+
+  <!-- Prospects -->
+  <section id="v-prospects" class="hidden">
+    <div class="banner">Double run : le Google Sheet reste la référence. Si je relance une resync Sheet vers base, elle écrase F, G, H et notes ici. Fais tes modifs dans le Sheet tant que la bascule n'est pas validée, ou préviens-moi avant une resync.</div>
+    <div class="actions">
+      <button class="btn" disabled title="Phase 3 : demande l'accès Gmail (OAuth Google)">SYNC Gmail · bientôt</button>
+      <button class="btn" disabled title="Phase 4 : Gmail + Gemini">Créer les accroches · bientôt</button>
+      <button class="btn" disabled title="Phase 4 : Gmail + Gemini">Créer les relances · bientôt</button>
+      <button class="btn" disabled title="Phase 5 : demande ton GO RECON">Demander un lot RECON · bientôt</button>
+      <span class="sp" style="flex:1"></span>
+      <button class="btn sec" id="reload">Recharger</button>
+      <button class="btn sec" id="csv">Exporter CSV (filtre actuel)</button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="filters">
+      <div class="ms" id="ms-tab"></div>
+      <div class="ms" id="ms-F"></div>
+      <div class="ms" id="ms-G"></div>
+      <div class="ms" id="ms-media"></div>
+      <input type="search" id="f-q" placeholder="Rechercher : nom, mail, site, contact, notes">
+      <button class="btn sec" id="f-reset">Effacer les filtres</button>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th title="Ligne dans l'onglet du Sheet (onglet au survol)">Ligne</th><th>Entreprise</th><th>Email</th><th>Média</th><th>F · Validation Sellsy</th><th>G · Statut suivi</th><th>H accroche</th><th>Relances</th><th>Notes</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="pager"><button class="btn sec" id="prev">‹ Précédent</button><span id="pinfo" class="mute"></span><button class="btn sec" id="next">Suivant ›</button></div>
+  </section>
+
+  <section id="v-historique" class="hidden">
+    <div class="filters"><input type="search" id="h-q" placeholder="Rechercher dans l'historique anti-doublons"></div>
+    <div class="tablewrap"><table><thead><tr><th>Ligne</th><th>Entreprise</th><th>Site</th><th>Email</th><th>Source</th><th>Statut</th></tr></thead><tbody id="hrows"></tbody></table></div>
+  </section>
+
+  <section id="v-rdv" class="hidden">
+    <div class="tablewrap"><table><thead><tr><th>Date</th><th>Société</th><th>Contact</th><th>Email</th><th>Téléphone</th><th>Type</th><th>Média</th><th>Résultat</th><th>Prix annoncé</th><th>Prochaine action</th><th>Statut</th><th>Notes</th></tr></thead><tbody id="rrows"></tbody></table></div>
+  </section>
+
+  <section id="v-journal" class="hidden">
+    <p class="mute">Les 300 dernières modifications de F, G, H et notes (interface ou resync).</p>
+    <div class="tablewrap"><table><thead><tr><th>Quand</th><th>Entreprise</th><th>Champ</th><th>Avant</th><th>Après</th><th>Par</th></tr></thead><tbody id="jrows"></tbody></table></div>
+  </section>
+</main>
+
+<aside id="panel">
+  <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+    <div><h2 id="p-nom"></h2><div class="mute" id="p-sub"></div></div>
+    <button class="btn sec" id="p-close">Fermer</button>
+  </div>
+  <div id="p-info" style="margin-top:10px"></div>
+  <label for="p-F">F · Validation Sellsy</label><select id="p-F"></select>
+  <label for="p-G">G · Statut de suivi</label><select id="p-G"></select>
+  <label for="p-H">H · Date accroche</label><input type="date" id="p-H">
+  <label for="p-L">Notes (RDV / notes)</label><textarea id="p-L"></textarea>
+  <div style="margin-top:14px;display:flex;gap:8px"><button class="btn" id="p-save">Enregistrer</button><span id="p-msg" class="mute"></span></div>
+  <h3 style="font-size:14px;margin-top:22px">Historique de cette ligne</h3>
+  <div id="p-journal" class="mute">…</div>
+</aside>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const SUPABASE_URL = 'https://rwoziadujlzvyxojebkn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Ws82UbFPs5xD-EnyYHQdHw_M3awfyyR'; // clé publique, sans danger : la RLS filtre tout
+// Empreintes SHA-256 des deux adresses autorisées (pas d'adresse en clair dans le fichier publié).
+// Simple confort : la vraie barrière est la RLS mf.is_mehdi() côté base.
+const ALLOWED_SHA256 = ['7a63b65baf2498fff0cfde5c9cb783d2423549efcc4bf271ee68cb311a12d40c','d6b9d21961f9c14ed17a8eb24f28dddbb81c09c705d4a7ca2c20979714e8b975'];
+async function isAllowed(email){
+  if (!window.crypto || !crypto.subtle) return true; // contexte non sécurisé : on laisse la RLS trancher
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email));
+  return ALLOWED_SHA256.includes([...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join(''));
+}
+const TABS = {nouveaux_prospects:'Nouveaux prospects V2', niches:'Prospection niches sociétales V2', lancements:'Lancements innovants V2', fou_du_bus:'fou du bus V2', canada:'Canada V2'};
+const F_VALUES = ['À vérifier','OK','OK créé','Non contactable','Non brûlé'];
+const G_VALUES = ['Non contacté','Brouillons ok','Mail envoyé','Relance 1','Relance 2','Répondu','RDV','Refus','Ko'];
+const COLS = 'id,source_tab,sheet_row,nom_entreprise,site_web,contact,email,media_cible,validation_sellsy,statut_suivi,date_accroche,date_relance,nb_relances,date_ajout,rdv_notes,produit_offre,signal_commercial,source_url,siren,updated_at';
+const PAGE = 100;
+// Couleurs reprises de la mise en forme conditionnelle des 5 onglets V2 du Sheet (lue le 10/11/2026).
+// F colore toute la ligne A:O ; G colore la cellule G. Valeur absente = pas de couleur dans le Sheet (neutre).
+const F_COLORS = {'OK créé':'#b6d7a8','OK':'#d9ead3','Non contactable':'#f4cccc','Non brûlé':'#ea9999'};
+const G_COLORS = {'Brouillons ok':'#cfe2f3','Mail envoyé':'#d9ead3','Relance 1':'#fce5cd','Relance 2':'#f9cb9c','Répondu':'#d0e0e3','RDV':'#d9d2e9','Refus':'#f4cccc','Ko':'#ea9999'};
+const FIELD_COLORS = {validation_sellsy:F_COLORS, statut_suivi:G_COLORS};
+const NEUTRAL = '#ffffff';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {db:{schema:'mf'}, auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false, storageKey:'mf-cockpit-auth'}});
+const $ = id => document.getElementById(id);
+const esc = s => s==null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const frDate = d => d ? d.split('-').reverse().join('/') : '';
+const frDT = d => d ? new Date(d).toLocaleString('fr-FR',{timeZone:'Europe/Paris'}) : '';
+let ALL = [], VIEW = [], page = 0, current = null, HIST = null, RDV = null;
+
+function toast(t){ const e=$('toast'); e.textContent=t; e.style.display='block'; clearTimeout(e._t); e._t=setTimeout(()=>e.style.display='none',3500); }
+function explain(err){
+  const m = (err && (err.message||err.msg||err.error_description)) || String(err);
+  if (/PGRST106|Invalid schema|schema must be/i.test(m)) return "Le schéma mf n'est pas encore ouvert à l'API. Va dans Supabase > Project Settings > Data API > Exposed schemas et ajoute mf (voir ETAPES-GOOGLE.md, étape 0).";
+  if (/JWT|expired/i.test(m)) return "Ta session a expiré, reconnecte-toi.";
+  if (/invalid login credentials/i.test(m)) return "Adresse ou mot de passe incorrect (ou compte pas encore créé dans Supabase).";
+  if (/email not confirmed/i.test(m)) return "Compte non confirmé : dans Supabase, recrée l'utilisateur avec Auto Confirm coché.";
+  if (/rate limit|too many/i.test(m)) return "Trop d'essais. Attends quelques minutes puis réessaie.";
+  return m;
+}
+
+/* ---------- Connexion ---------- */
+$('lform').onsubmit = async (e) => {
+  e.preventDefault();
+  const email = $('lemail').value.trim().toLowerCase(), password = $('lpass').value;
+  if (!(await isAllowed(email))) { $('lmsg').innerHTML = '<span class="err">Adresse non autorisée.</span>'; return; }
+  if (!password) return;
+  $('signin').disabled = true; $('lmsg').textContent = 'Connexion…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  $('signin').disabled = false; $('lpass').value = '';
+  if (error) { $('lmsg').innerHTML = '<span class="err">'+esc(explain(error))+'</span>'; return; }
+  $('lmsg').textContent = '';
+  start();
+};
+$('logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function start(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) { $('login').classList.remove('hidden'); return; }
+  const email = (session.user.email||'').toLowerCase();
+  $('who').textContent = email; $('logout').classList.remove('hidden');
+  if (!(await isAllowed(email))) { await sb.auth.signOut(); $('login').classList.remove('hidden'); $('who').textContent=''; $('logout').classList.add('hidden'); $('lmsg').innerHTML='<span class="err">Adresse non autorisée.</span>'; return; }
+  $('login').classList.add('hidden'); $('nav').classList.remove('hidden');
+  show('prospects');
+  await loadProspects();
+}
+
+/* ---------- Navigation ---------- */
+document.querySelectorAll('#nav button').forEach(b => b.onclick = () => show(b.dataset.v));
+function show(v){
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v===v));
+  ['prospects','historique','rdv','journal'].forEach(x => $('v-'+x).classList.toggle('hidden', x!==v));
+  if (v==='historique' && !HIST) loadHist();
+  if (v==='rdv' && !RDV) loadRdv();
+  if (v==='journal') loadJournal();
+}
+
+/* ---------- Prospects ---------- */
+async function loadProspects(){
+  $('rows').innerHTML = '<tr><td colspan="9" class="mute">Chargement…</td></tr>';
+  const out = []; let from = 0;
+  while (true) {
+    const { data, error } = await sb.from('prospects').select(COLS).order('source_tab').order('sheet_row').range(from, from+999);
+    if (error) { $('rows').innerHTML = '<tr><td colspan="9" class="err">'+esc(explain(error))+'</td></tr>'; return; }
+    out.push(...data); if (data.length < 1000) break; from += 1000;
+  }
+  ALL = out;
+  if (!ALL.length) { $('rows').innerHTML = '<tr><td colspan="9" class="err">Aucune ligne visible. Vérifie que tu es connecté avec une adresse autorisée.</td></tr>'; return; }
+  fillFilters(); SERVER = ALL; filterText();
+  if (Object.values(SEL).some(x=>x.size)) apply();
+  toast(ALL.length+' prospects chargés');
+}
+/* ---------- Filtres à choix multiples ---------- */
+// SEL[k] vide = pas de filtre (tout). '(vide)' = valeur non renseignée.
+const FILTERS = {
+  tab:   { col:'source_tab',        label:'Onglets',            all:'Tous les onglets' },
+  F:     { col:'validation_sellsy', label:'F · Validation Sellsy', all:'F : tout', colors:()=>F_COLORS },
+  G:     { col:'statut_suivi',      label:'G · Statut suivi',   all:'G : tout', colors:()=>G_COLORS },
+  media: { col:'media_cible',       label:'Médias',             all:'Tous les médias', search:true },
+};
+const SEL = { tab:new Set(), F:new Set(), G:new Set(), media:new Set() };
+let OPTS = {};
+function fillFilters(){
+  const count = col => ALL.reduce((o,r)=>{ const v=r[col]||'(vide)'; o[v]=(o[v]||0)+1; return o; },{});
+  const cT = count('source_tab'), cF = count('validation_sellsy'), cG = count('statut_suivi'), cM = count('media_cible');
+  const withEmpty = (vals, c) => { const l=[...new Set([...vals, ...Object.keys(c).filter(v=>v!=='(vide)')])]; if (c['(vide)']) l.push('(vide)'); return l; };
+  OPTS = {
+    tab:   Object.keys(TABS).map(v => ({v, lab:TABS[v], n:cT[v]||0})),
+    F:     withEmpty(F_VALUES, cF).map(v => ({v, lab:v, n:cF[v]||0})),
+    G:     withEmpty(G_VALUES, cG).map(v => ({v, lab:v, n:cG[v]||0})),
+    media: Object.keys(cM).sort((a,b)=>cM[b]-cM[a]).map(v => ({v, lab:v, n:cM[v]})),
+  };
+  Object.keys(FILTERS).forEach(buildMs);
+}
+function msLabel(k){
+  const n = SEL[k].size, f = FILTERS[k];
+  if (!n || n===OPTS[k].length) return f.all;
+  if (n===1) { const v=[...SEL[k]][0], o=OPTS[k].find(x=>x.v===v); return f.label+' : '+(o?o.lab:v); }
+  return f.label+' ('+n+')';
+}
+function buildMs(k){
+  const f = FILTERS[k], box = $('ms-'+k), cols = f.colors ? f.colors() : null;
+  box.innerHTML = '<button type="button" class="'+(SEL[k].size?'on':'')+'">'+esc(msLabel(k))+'</button>'
+    + '<div class="menu"><div class="tools">'+(f.search?'<input type="search" placeholder="Chercher…">':'<span class="mute" style="flex:1;font-size:12px">'+esc(f.label)+'</span>')
+    + '<button type="button" data-a="all">Tout</button><button type="button" data-a="none">Aucun</button></div><div class="list">'
+    + OPTS[k].map(o => '<label data-v="'+esc(o.v)+'"><input type="checkbox" value="'+esc(o.v)+'"'+(SEL[k].has(o.v)?' checked':'')+'>'
+        + (cols ? '<span class="sw" style="background:'+(cols[o.v]||NEUTRAL)+'"></span>' : '')
+        + '<span>'+esc(o.lab)+'</span><span class="c">'+o.n+'</span></label>').join('')
+    + '</div></div>';
+  const btn = box.querySelector(':scope > button');
+  btn.onclick = e => { e.stopPropagation(); const open = !box.classList.contains('open'); closeMenus(); if (open) box.classList.add('open'); };
+  box.querySelector('.menu').onclick = e => e.stopPropagation();
+  box.querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => { cb.checked ? SEL[k].add(cb.value) : SEL[k].delete(cb.value); msChanged(k); });
+  box.querySelector('[data-a=all]').onclick = () => { OPTS[k].forEach(o=>SEL[k].add(o.v)); box.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=true); msChanged(k); };
+  box.querySelector('[data-a=none]').onclick = () => { SEL[k].clear(); box.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false); msChanged(k); };
+  const si = box.querySelector('.tools input');
+  if (si) si.oninput = () => { const q = norm(si.value); box.querySelectorAll('.list label').forEach(l => l.style.display = norm(l.textContent).includes(q) ? '' : 'none'); };
+}
+function msChanged(k){
+  const b = $('ms-'+k).querySelector(':scope > button'); b.textContent = msLabel(k); b.classList.toggle('on', SEL[k].size>0);
+  page = 0; schedule();
+}
+function closeMenus(){ document.querySelectorAll('.ms.open').forEach(m=>m.classList.remove('open')); }
+document.addEventListener('click', closeMenus);
+function setFilter(k, values){ SEL[k] = new Set(values); buildMs(k); page = 0; apply(); }
+let qT; $('f-q').oninput = () => { clearTimeout(qT); qT=setTimeout(()=>{ page=0; filterText(); },200); };
+$('f-reset').onclick = () => { Object.keys(SEL).forEach(k=>SEL[k].clear()); $('f-q').value=''; Object.keys(FILTERS).forEach(buildMs); page=0; apply(); };
+let aT; function schedule(){ clearTimeout(aT); aT = setTimeout(apply, 350); }
+$('reload').onclick = loadProspects;
+$('prev').onclick = () => { if (page>0){page--; render();} };
+$('next').onclick = () => { if ((page+1)*PAGE < VIEW.length){page++; render();} };
+
+function norm(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+// Requête Supabase : un filtre « in » par liste cochée ; '(vide)' devient « is null » dans un or.
+const pgq = v => '"'+String(v).replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"';
+function applyFilter(q, col, set, total){
+  if (!set.size || set.size===total) return q;
+  const vals = [...set].filter(v => v!=='(vide)'), empty = set.has('(vide)');
+  if (!empty) return q.in(col, vals);
+  if (!vals.length) return q.is(col, null);
+  return q.or(col+'.is.null,'+col+'.in.('+vals.map(pgq).join(',')+')');
+}
+let SERVER = [], reqId = 0;
+async function apply(){
+  const my = ++reqId; const out = []; let from = 0;
+  $('pinfo').textContent = 'Filtrage…';
+  while (true) {
+    let q = sb.from('prospects').select(COLS);
+    Object.keys(FILTERS).forEach(k => { q = applyFilter(q, FILTERS[k].col, SEL[k], (OPTS[k]||[]).length); });
+    const { data, error } = await q.order('source_tab').order('sheet_row').range(from, from+999);
+    if (my !== reqId) return;               // une requête plus récente a pris le relais
+    if (error) { $('rows').innerHTML = '<tr><td colspan="9" class="err">'+esc(explain(error))+'</td></tr>'; $('pinfo').textContent=''; return; }
+    out.push(...data); if (data.length < 1000) break; from += 1000;
+  }
+  SERVER = out; filterText();
+}
+function filterText(){
+  const q = norm($('f-q').value.trim());
+  VIEW = q ? SERVER.filter(r => norm([r.nom_entreprise,r.email,r.site_web,r.contact,r.rdv_notes,r.media_cible,r.siren].join(' ')).includes(q)) : SERVER.slice();
+  stats(); render();
+}
+function stats(){
+  const c = (arr, k) => arr.reduce((o,r)=>{ const v=r[k]||'(vide)'; o[v]=(o[v]||0)+1; return o; },{});
+  const g = c(VIEW,'statut_suivi'), f = c(VIEW,'validation_sellsy');
+  const card = (n,l,click,col) => '<div class="stat" style="'+(col?'background:'+col+';border-left-color:'+col:'')+'" '+(click?'data-k="'+esc(click[0])+'" data-v="'+esc(click[1])+'"':'')+'><b>'+n+'</b><small>'+esc(l)+'</small></div>';
+  let h = '<div class="stat" id="st-all" title="Effacer les filtres"><b>'+VIEW.length+'</b><small>'+esc(VIEW.length===ALL.length ? 'prospects au total' : 'dans le filtre (sur '+ALL.length+')')+'</small></div>';
+  G_VALUES.forEach(v => { if (g[v]) h += card(g[v], 'G · '+v, ['G',v], G_COLORS[v]); });
+  F_VALUES.forEach(v => { if (f[v]) h += card(f[v], 'F · '+v, ['F',v], F_COLORS[v]); });
+  $('stats').innerHTML = h;
+  $('st-all').onclick = () => $('f-reset').click();
+  $('stats').querySelectorAll('.stat[data-k]').forEach(e => e.onclick = () => setFilter(e.dataset.k, [e.dataset.v]));
+}
+function stSelect(r, field){
+  const vals = field==='validation_sellsy' ? F_VALUES : G_VALUES, cur = r[field] || '';
+  const list = [...vals]; if (cur && !list.includes(cur)) list.push(cur);
+  const col = FIELD_COLORS[field][cur] || NEUTRAL;
+  return '<select class="st" data-f="'+field+'" style="background:'+col+'" title="Modifier : enregistrement immédiat">'
+    + '<option value=""'+(cur?'':' selected')+'>(vide)</option>'
+    + list.map(v => '<option value="'+esc(v)+'"'+(v===cur?' selected':'')+' style="background:'+(FIELD_COLORS[field][v]||NEUTRAL)+'">'+esc(v)+'</option>').join('')
+    + '</select>';
+}
+function rowHtml(r, idx){
+  return '<tr data-i="'+idx+'" style="--rowbg:'+(F_COLORS[r.validation_sellsy]||NEUTRAL)+'"><td title="'+esc(TABS[r.source_tab]||r.source_tab)+'">'+esc(r.sheet_row)+'</td><td><b>'+esc(r.nom_entreprise)+'</b></td><td>'+esc(r.email)+'</td><td>'+esc(r.media_cible)+'</td><td>'+stSelect(r,'validation_sellsy')+'</td><td>'+stSelect(r,'statut_suivi')+'</td><td>'+frDate(r.date_accroche)+'</td><td>'+esc(r.nb_relances)+'</td><td class="n" title="'+esc(r.rdv_notes)+'">'+esc(r.rdv_notes)+'</td></tr>';
+}
+function bindRow(tr){
+  tr.onclick = e => { if (e.target.closest('select')) return; openPanel(VIEW[+tr.dataset.i]); };
+  tr.querySelectorAll('select.st').forEach(sel => {
+    sel.onclick = e => e.stopPropagation();
+    sel.onchange = async () => {
+      const r = VIEW[+tr.dataset.i], field = sel.dataset.f, val = sel.value || null, old = r[field] || '';
+      sel.disabled = true;
+      const res = await saveRow(r, {[field]: val});
+      if (!res.ok) { sel.value = old; sel.disabled = false; alert(res.msg); return; }
+      toast('Enregistré : '+r.nom_entreprise+' · '+(field==='validation_sellsy'?'F':'G')+' = '+(val||'(vide)'));
+      const nt = document.createElement('tbody'); nt.innerHTML = rowHtml(r, +tr.dataset.i);
+      const fresh = nt.firstChild; tr.replaceWith(fresh); bindRow(fresh);
+      stats();
+      if (current && current.id===r.id) openPanel(r);
+    };
+  });
+}
+function render(){
+  const slice = VIEW.slice(page*PAGE, (page+1)*PAGE);
+  $('rows').innerHTML = slice.map((r,i) => rowHtml(r, page*PAGE+i)).join('') || '<tr><td colspan="9" class="mute">Aucun prospect pour ce filtre.</td></tr>';
+  $('rows').querySelectorAll('tr[data-i]').forEach(bindRow);
+  const tot = VIEW.length, a = tot ? page*PAGE+1 : 0, b = Math.min(tot,(page+1)*PAGE);
+  $('pinfo').textContent = a+'–'+b+' sur '+tot;
+}
+// Écriture unique (tableau et fiche) : garde-fou updated_at, trace dans mf.modifs_interface par trigger
+async function saveRow(r, p){
+  const { data, error } = await sb.from('prospects').update(p).eq('id', r.id).eq('updated_at', r.updated_at).select(COLS);
+  if (error) return { ok:false, msg: explain(error) };
+  if (!data || !data.length) return { ok:false, msg: "Pas enregistré : la ligne a changé entre-temps (ou droits insuffisants). Clique sur Recharger puis réessaie." };
+  Object.assign(r, data[0]);
+  [ALL, SERVER].forEach(arr => { const o = arr.find(x => x.id===r.id); if (o && o!==r) Object.assign(o, data[0]); });
+  return { ok:true };
+}
+
+/* ---------- Fiche / édition ---------- */
+function opts(id, vals, cur){
+  const list = [...vals]; if (cur && !list.includes(cur)) list.push(cur);
+  $(id).innerHTML = '<option value="">(vide)</option>' + list.map(v=>'<option'+(v===cur?' selected':'')+'>'+esc(v)+'</option>').join('');
+}
+async function openPanel(r){
+  current = r;
+  $('p-nom').textContent = r.nom_entreprise || '';
+  $('p-sub').textContent = (TABS[r.source_tab]||r.source_tab)+' · ligne '+r.sheet_row;
+  const kv = (k,v,link) => v ? '<div class="kv"><span>'+k+' :</span> '+(link?'<a href="'+esc(/^https?:/i.test(v)?v:'https://'+v)+'" target="_blank" rel="noopener">'+esc(v)+'</a>':esc(v))+'</div>' : '';
+  $('p-info').innerHTML = kv('Site',r.site_web,true)+kv('Contact',r.contact)+kv('Email',r.email)+kv('Média',r.media_cible)+kv('SIREN',r.siren)+kv('Date relance (I)',frDate(r.date_relance))+kv('Nb relances (J)',r.nb_relances)+kv('Ajouté le (K)',frDate(r.date_ajout))+kv('Produit / offre',r.produit_offre)+kv('Signal commercial',r.signal_commercial)+kv('Source',r.source_url,true);
+  opts('p-F', F_VALUES, r.validation_sellsy); opts('p-G', G_VALUES, r.statut_suivi); colorPanel();
+  $('p-H').value = r.date_accroche || ''; $('p-L').value = r.rdv_notes || ''; $('p-msg').textContent = '';
+  $('panel').style.display = 'block';
+  loadRowJournal(r.id);
+}
+function colorPanel(){ $('p-F').style.background = F_COLORS[$('p-F').value]||NEUTRAL; $('p-G').style.background = G_COLORS[$('p-G').value]||NEUTRAL; }
+$('p-F').onchange = colorPanel; $('p-G').onchange = colorPanel;
+$('p-close').onclick = () => { $('panel').style.display='none'; current=null; };
+document.addEventListener('keydown', e => { if (e.key==='Escape') $('p-close').click(); });
+$('p-save').onclick = async () => {
+  if (!current) return;
+  const patch = { validation_sellsy: $('p-F').value || null, statut_suivi: $('p-G').value || null, date_accroche: $('p-H').value || null, rdv_notes: $('p-L').value || null };
+  const changed = Object.keys(patch).filter(k => (patch[k]||null) !== (current[k]||null));
+  if (!changed.length) { $('p-msg').textContent = 'Rien à enregistrer.'; return; }
+  const p = {}; changed.forEach(k => p[k]=patch[k]);
+  $('p-msg').textContent = 'Enregistrement…';
+  const res = await saveRow(current, p);
+  if (!res.ok) { $('p-msg').innerHTML = '<span class="err">'+esc(res.msg)+'</span>'; return; }
+  $('p-msg').innerHTML = '<span class="ok">Enregistré.</span>';
+  toast('Enregistré : '+current.nom_entreprise);
+  stats(); render(); loadRowJournal(current.id);
+};
+async function loadRowJournal(id){
+  const { data, error } = await sb.from('modifs_interface').select('champ,ancien,nouveau,par,fait_le').eq('prospect_id', id).order('fait_le',{ascending:false}).limit(50);
+  if (error) { $('p-journal').innerHTML = '<span class="err">'+esc(explain(error))+'</span>'; return; }
+  $('p-journal').innerHTML = data.length ? data.map(j => '<div class="kv">'+esc(frDT(j.fait_le))+' · <b>'+esc(j.champ)+'</b> : '+esc(j.ancien||'(vide)')+' → '+esc(j.nouveau||'(vide)')+' <span>('+esc(j.par)+')</span></div>').join('') : 'Aucune modification enregistrée depuis la base.';
+}
+
+/* ---------- Historique, RDV, journal ---------- */
+async function loadHist(){
+  const { data, error } = await sb.from('historique').select('sheet_row,entreprise,site_web,email,source_historique,statut').order('sheet_row');
+  if (error) { $('hrows').innerHTML = '<tr><td colspan="6" class="err">'+esc(explain(error))+'</td></tr>'; return; }
+  HIST = data; renderHist();
+}
+function renderHist(){
+  const q = norm($('h-q').value);
+  $('hrows').innerHTML = HIST.filter(h => !q || norm([h.entreprise,h.site_web,h.email,h.statut].join(' ')).includes(q)).map(h => '<tr><td>'+esc(h.sheet_row)+'</td><td><b>'+esc(h.entreprise)+'</b></td><td>'+esc(h.site_web)+'</td><td>'+esc(h.email)+'</td><td>'+esc(h.source_historique)+'</td><td>'+esc(h.statut)+'</td></tr>').join('') || '<tr><td colspan="6" class="mute">Rien.</td></tr>';
+}
+$('h-q').oninput = () => HIST && renderHist();
+async function loadRdv(){
+  const { data, error } = await sb.from('suivi_rdv').select('*').order('date_rdv',{ascending:false});
+  if (error) { $('rrows').innerHTML = '<tr><td colspan="12" class="err">'+esc(explain(error))+'</td></tr>'; return; }
+  RDV = data;
+  $('rrows').innerHTML = data.map(r => '<tr><td>'+frDate(r.date_rdv)+'</td><td><b>'+esc(r.societe)+'</b></td><td>'+esc(r.contact)+'</td><td>'+esc(r.email)+'</td><td>'+esc(r.telephone)+'</td><td>'+esc(r.type_rdv)+'</td><td>'+esc(r.media)+'</td><td>'+esc(r.resultat)+'</td><td>'+esc(r.prix_annonce_txt||r.prix_annonce_eur)+'</td><td>'+esc(r.prochaine_action)+(r.date_prochaine_action?' ('+esc(frDT(r.date_prochaine_action))+')':'')+'</td><td>'+esc(r.statut)+'</td><td>'+esc(r.notes)+'</td></tr>').join('') || '<tr><td colspan="12" class="mute">Aucun RDV.</td></tr>';
+}
+async function loadJournal(){
+  $('jrows').innerHTML = '<tr><td colspan="6" class="mute">Chargement…</td></tr>';
+  const { data, error } = await sb.from('modifs_interface').select('prospect_id,champ,ancien,nouveau,par,fait_le').order('fait_le',{ascending:false}).limit(300);
+  if (error) { $('jrows').innerHTML = '<tr><td colspan="6" class="err">'+esc(explain(error))+'</td></tr>'; return; }
+  const byId = Object.fromEntries(ALL.map(r=>[r.id,r]));
+  $('jrows').innerHTML = data.map(j => '<tr><td>'+esc(frDT(j.fait_le))+'</td><td>'+esc((byId[j.prospect_id]||{}).nom_entreprise||j.prospect_id)+'</td><td>'+esc(j.champ)+'</td><td>'+esc(j.ancien)+'</td><td>'+esc(j.nouveau)+'</td><td>'+esc(j.par)+'</td></tr>').join('') || '<tr><td colspan="6" class="mute">Aucune modification pour l\'instant.</td></tr>';
+}
+
+/* ---------- Export CSV ---------- */
+$('csv').onclick = () => {
+  const head = ['Onglet','Ligne','Entreprise','Site','Contact','Email','Média','F','G','H','I','J','K','Notes','Produit','Signal','Source'];
+  const keys = ['source_tab','sheet_row','nom_entreprise','site_web','contact','email','media_cible','validation_sellsy','statut_suivi','date_accroche','date_relance','nb_relances','date_ajout','rdv_notes','produit_offre','signal_commercial','source_url'];
+  const cell = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const csv = '\ufeff'+[head.map(cell).join(';')].concat(VIEW.map(r => keys.map(k => cell(k==='source_tab'?(TABS[r[k]]||r[k]):r[k])).join(';'))).join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = 'prospects-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+};
+
+start();
+</script>
+</body>
+</html>

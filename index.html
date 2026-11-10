@@ -699,7 +699,7 @@ const QUICK = {
   all:      { lab:'Tout',              sel:{},                                         cnt: () => ALL.length },
   valider:  { lab:'À valider',         sel:{F:['À vérifier','(vide)']},                cnt: () => ALL.filter(r => !r.validation_sellsy || r.validation_sellsy==='À vérifier').length, tip:'F vide ou À vérifier' },
   impact:   { lab:'Prêts pour IMPACT', sel:()=>({F:okVals(), G:['Non contacté']}), extra:isImpact, cnt: () => ALL.filter(isImpact).length, tip:'F commence par OK, G = Non contacté, H vide, email présent' },
-  relances: { lab:'Relances en cours', sel:{G:['Mail envoyé','Relance 1','Relance 2']}, cnt: () => ALL.filter(r => ['Mail envoyé','Relance 1','Relance 2'].includes(r.statut_suivi)).length, tip:'G = Mail envoyé, Relance 1 ou Relance 2' },
+  relances: { lab:'En attente de réponse', sel:{G:['Mail envoyé','Relance 1','Relance 2']}, cnt: () => ALL.filter(r => ['Mail envoyé','Relance 1','Relance 2'].includes(r.statut_suivi)).length, tip:'G = Mail envoyé, Relance 1 ou Relance 2' },
   rdv:      { lab:'RDV',               sel:{G:['RDV']},                                cnt: () => ALL.filter(r => r.statut_suivi==='RDV').length, tip:'G = RDV' },
 };
 let QV = 'all';
@@ -734,7 +734,8 @@ function gaugeSvg(frac, big, unit){
 const pct = (a, b) => b ? Math.round(100*a/b) : 0;
 function gauges(){
   const tot = ALL.length, G = r => r.statut_suivi || '';
-  const aContacter = ALL.filter(r => !G(r) || G(r)==='Non contacté').length;
+  const isAContacter = r => /^OK/.test(r.validation_sellsy||'') && G(r)==='Non contacté';
+  const aContacter = ALL.filter(isAContacter).length;
   const contactes = ALL.filter(r => CONTACTES.includes(G(r))).length;
   const reponses = ALL.filter(r => REPONSES.includes(G(r))).length;
   const rdv = ALL.filter(r => G(r)==='RDV').length;
@@ -743,16 +744,16 @@ function gauges(){
   const row = (q, lab, n) => '<div class="scr-row" data-q="'+q+'"><span>'+esc(lab)+'</span><b>'+n+'</b></div>';
   const screen = '<div class="screen"><div><div class="scr-top"><span>Vue d\'ensemble</span><span>'+esc(today)+'</span></div>'
     + '<div class="scr-body"><div class="scr-big"><b>'+tot+'</b><span>prospects<br>en base</span></div><div class="scr-rows">'
-    + row('valider','À valider (F)',QUICK.valider.cnt()) + row('impact','Prêts pour IMPACT',QUICK.impact.cnt()) + row('relances','Relances en cours',QUICK.relances.cnt())
+    + row('valider','À valider (F)',QUICK.valider.cnt()) + row('impact','Prêts pour IMPACT',QUICK.impact.cnt()) + row('relances','En attente de réponse',QUICK.relances.cnt())
     + '<div class="scr-row dim"><span>Dernière synchro Gmail</span><b>—</b></div></div></div></div></div>';
   $('gauges').innerHTML =
-      g('contacter', aContacter/tot, aContacter, 'NON CONTACTÉS', 'À contacter', pct(aContacter,tot)+' % du total', 'G vide ou Non contacté, part du total. Clic : filtrer')
+      g('contacter', aContacter/tot, aContacter, '', 'À contacter', pct(aContacter,tot)+' % du total', 'Validés Sellsy (F = OK ou commence par OK) et G = Non contacté, part du total. Clic : filtrer')
     + g('envoyes', contactes/tot, contactes, 'CONTACTÉS', 'Mails envoyés', pct(contactes,tot)+' % du total', 'G = Mail envoyé, Relance 1 ou 2, Répondu, RDV ou Refus, part du total. Clic : filtrer')
     + screen
     + g('reponse', contactes ? reponses/contactes : 0, pct(reponses,contactes)+' %', 'RÉPONSES', 'Taux de réponse', reponses+' sur '+contactes+' contactés', 'Répondu, RDV ou Refus, sur les prospects contactés. Clic : filtrer')
     + g('rdv', contactes ? rdv/contactes : 0, rdv, 'RDV', 'RDV obtenus', pct(rdv,contactes)+' % des contactés', 'G = RDV, part des prospects contactés. Clic : filtrer');
-  const GV = { contacter:['Non contacté','(vide)'], envoyes:CONTACTES, reponse:REPONSES, rdv:['RDV'] };
-  $('gauges').querySelectorAll('.gauge').forEach(e => { e.onclick = () => e.dataset.g==='rdv' ? setQuick('rdv') : setView({G:GV[e.dataset.g]}); e.onkeydown = ev => { if (ev.key==='Enter') e.click(); }; });
+  const GV = { contacter:()=>({F:okVals(), G:['Non contacté']}), envoyes:()=>({G:CONTACTES}), reponse:()=>({G:REPONSES}) };
+  $('gauges').querySelectorAll('.gauge').forEach(e => { e.onclick = () => e.dataset.g==='rdv' ? setQuick('rdv') : setView(GV[e.dataset.g]()); e.onkeydown = ev => { if (ev.key==='Enter') e.click(); }; });
   $('gauges').querySelectorAll('.scr-row[data-q]').forEach(e => e.onclick = () => setQuick(e.dataset.q));
   // Aides des commandes (affichées au survol seulement)
   const relancer = ALL.filter(r => ['Mail envoyé','Relance 1'].includes(G(r))).length;

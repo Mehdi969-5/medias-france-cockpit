@@ -712,10 +712,11 @@ $('csv').onclick = () => {
 const CONTACTES = ['Mail envoyé','Relance 1','Relance 2','Répondu','RDV','Refus'];
 const REPONSES = ['Répondu','RDV','Refus'];
 const okVals = () => (OPTS.F||[]).map(o=>o.v).filter(v => /^OK/.test(v));
+const isAValider = r => (!r.validation_sellsy || r.validation_sellsy==='À vérifier') && (!r.statut_suivi || r.statut_suivi==='Non contacté');
 const isImpact = r => /^OK/.test(r.validation_sellsy||'') && r.statut_suivi==='Non contacté' && !r.date_accroche && !!(r.email||'').trim();
 const QUICK = {
   all:      { lab:'Tout',              sel:{},                                         cnt: () => ALL.length },
-  valider:  { lab:'À valider',         sel:{F:['À vérifier','(vide)']},                cnt: () => ALL.filter(r => !r.validation_sellsy || r.validation_sellsy==='À vérifier').length, tip:'F vide ou À vérifier' },
+  valider:  { lab:'À valider',         sel:{F:['À vérifier','(vide)'], G:['Non contacté','(vide)']}, extra:isAValider, cnt: () => ALL.filter(isAValider).length, tip:'F vide ou À vérifier, et jamais contacté (G = Non contacté ou vide). Contacté une fois = validé Sellsy.' },
   impact:   { lab:'Prêts pour IMPACT', sel:()=>({F:okVals(), G:['Non contacté']}), extra:isImpact, cnt: () => ALL.filter(isImpact).length, tip:'F commence par OK, G = Non contacté, H vide, email présent' },
   relances: { lab:'En attente de réponse', sel:{G:['Mail envoyé','Relance 1','Relance 2']}, cnt: () => ALL.filter(r => ['Mail envoyé','Relance 1','Relance 2'].includes(r.statut_suivi)).length, tip:'G = Mail envoyé, Relance 1 ou Relance 2' },
   rdv:      { lab:'RDV',               sel:{G:['RDV']},                                cnt: () => ALL.filter(r => r.statut_suivi==='RDV').length, tip:'G = RDV' },
@@ -908,6 +909,7 @@ async function showSyncSummary(s, runId){
   let h = kv('Mails lus', nf(s.messages_lus)) + kv('Mails liés à un prospect', nf(s.messages_rapproches))
     + kv('Prospects mis à jour', nf(s.prospects_maj))
     + (keys.length ? '<ul>'+keys.map(k => '<li>'+esc(k)+' : <b>'+nf(st[k])+'</b></li>').join('')+'</ul>' : '<div class="kv mute">Aucun statut à faire avancer.</div>')
+    + kv('Validés Sellsy automatiquement (F → OK)', nf(s.valides_sellsy))
     + kv('Dates d\'accroche (H) ajoutées', nf(s.dates_accroche)) + kv('Relances (I/J) renseignées', nf(s.relances))
     + kv('Prospects avec une proposition / devis envoyé', nf(s.propals))
     + (s.non_appliques_statut_fige ? kv('Non modifiés car déjà en Refus, Ko ou RDV', nf(s.non_appliques_statut_fige)) : '')

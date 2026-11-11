@@ -295,11 +295,15 @@
           <span class="tip"><strong>IMPACT · accroches</strong>Crée les brouillons Gmail d'accroche des prospects validés, par lots de 10 (du bas vers le haut) : modèle validé du média + nom de l'entreprise, contrôlé avant chaque brouillon. Jamais d'envoi : tu relis et tu envoies toi-même.<span class="n" id="tip-impact"></span><span class="last">Dernier lancement : <span class="st-last" id="impact-last">jamais</span></span></span>
         </div>
         <div class="cmd" tabindex="0" data-cmd="recon">
-          <button class="face" disabled aria-label="RECON"><span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg><b>RECON</b></span></button>
-          <span class="state"><i></i><span class="st-txt">Bientôt disponible</span></span>
-          <span class="tip"><strong>RECON · nouveaux prospects</strong>Demande un lot de nouveaux prospects, contrôlés contre l'historique anti-doublons.<span class="n" id="tip-recon"></span><span class="last">Dernier lancement : <span class="st-last">jamais</span></span></span>
+          <button class="face" id="recon-btn" aria-label="RECON"><span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg><b>RECON</b></span></button>
+          <span class="state"><i id="recon-dot"></i><span class="st-txt" id="recon-st">…</span></span>
+          <span class="tip"><strong>RECON · nouveaux prospects</strong>Demande un lot de 20 à 25 nouveaux prospects (base « semaine référence »), contrôlés contre toute la base anti-doublons avant qualification. Ajoutés avec F = À vérifier et G = Non contacté. Un seul lot à la fois.<span class="n" id="tip-recon"></span><span class="last">Dernier lancement : <span class="st-last" id="recon-last">jamais</span></span></span>
         </div>
         <div class="cmdcol">
+          <div class="cmd small hidden" tabindex="0" data-cmd="recon-cancel" id="recon-cancel-wrap">
+            <button class="face" id="recon-cancel" aria-label="Annuler le lot RECON"><span><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg><b>Annuler RECON</b></span></button>
+            <span class="tip"><strong>Annuler le lot RECON</strong>Arrête le lot en cours : RECON ne pourra plus rien ajouter pour ce lot. Les prospects déjà ajoutés restent en base (F = À vérifier).</span>
+          </div>
           <div class="cmd small" tabindex="0" data-cmd="relances">
             <button class="face" id="relances-btn" aria-label="Créer les relances"><span><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg><b>Relances</b></span></button>
             <span class="tip"><strong>Créer les relances</strong>Prépare les brouillons de Relance 1 (dans le fil de l'accroche) des mails restés sans réponse, selon ton calendrier : lun→mer, mar→jeu, mer→ven, jeu/ven→lun, fériés sautés. Vérifie avant chaque brouillon qu'il n'y a ni réponse, ni RDV, ni rebond. Jamais d'envoi.<span class="n" id="tip-relances"></span><span class="last">Dernier lancement : <span id="relances-last">jamais</span></span></span>
@@ -451,6 +455,7 @@ async function start(){
   await loadProspects();
   await syncInit();
   drInit();
+  rcInit();
 }
 
 /* ---------- Navigation ---------- */
@@ -1016,6 +1021,78 @@ function drSummary(kind, d){
 }
 $('impact-btn').onclick = () => drAsk('impact');
 $('relances-btn').onclick = () => drAsk('relances');
+
+/* ---------- RECON : demande d'un lot de nouveaux prospects (Edge Function recon-trigger, réveil de la routine RECON par webhook) ---------- */
+const RC = { st:null, busy:false, timer:null };
+const RC_ACTIF = ['demande','en cours'];
+function rcUi(state, txt){ $('recon-dot').className = state || ''; $('recon-st').textContent = txt; document.querySelector('.cmd[data-cmd="recon"]').classList.toggle('running', state==='run'); }
+function rcLabel(l){
+  if (!l) return ['ok', 'Prêt'];
+  const n = l.ajoutes || 0;
+  switch (l.status) {
+    case 'demande': return ['run', 'Lot demandé · réveil de RECON…'];
+    case 'en cours': return ['run', 'En cours · '+n+' ajouté'+(n>1?'s':'')];
+    case 'fini': return ['ok', 'Prêt · dernier lot : '+n+' ajouté'+(n>1?'s':'')];
+    case 'incomplet': return ['warn', 'Dernier lot incomplet · '+n+' ajouté'+(n>1?'s':'')];
+    case 'annule': return ['ok', 'Prêt · dernier lot annulé'];
+    case 'expire': return ['warn', 'Dernier lot expiré sans réponse'];
+    case 'echec_reveil': return ['err', 'Erreur · RECON non réveillé'];
+    default: return ['err', 'Erreur · dernier lot'];
+  }
+}
+async function rcInit(){
+  clearTimeout(RC.timer);
+  let r; try { r = await callFn('recon-trigger', { action:'status' }); } catch(e) { r = { ok:false }; }
+  if (!r.ok) { RC.st = null; rcUi('err', 'Indisponible'); $('recon-cancel-wrap').classList.add('hidden'); return; }
+  const prev = RC.st && RC.st.last, l = r.data.last; RC.st = r.data;
+  const actif = !!(l && RC_ACTIF.includes(l.status));
+  if (!r.data.webhook_configure && !actif) rcUi('warn', 'En attente de configuration');
+  else { const [s, t] = rcLabel(l); rcUi(s, t); }
+  $('recon-cancel-wrap').classList.toggle('hidden', !actif);
+  $('recon-last').textContent = l ? frDT(l.demande_le) : 'jamais';
+  $('tip-recon').innerHTML = !r.data.webhook_configure ? '<b>En attente de configuration</b> : le lien de réveil de RECON n\'est pas encore renseigné.'
+    : l ? 'Dernier lot : <b>'+esc(l.status)+'</b> · '+(l.ajoutes||0)+' ajouté(s), '+(l.doublons_ecartes||0)+' doublon(s) écarté(s)'+(l.note ? ' · '+esc(l.note) : '') : 'Aucun lot lancé pour l\'instant.';
+  if (prev && l && prev.id === l.id && (prev.ajoutes||0) !== (l.ajoutes||0)) await loadProspects();
+  if (actif) RC.timer = setTimeout(rcInit, 30000);
+}
+function rcAsk(){
+  if (RC.busy) return;
+  const st = RC.st, l = st && st.last, actif = !!(l && RC_ACTIF.includes(l.status));
+  const kv = (k, v) => '<div class="kv"><span>'+k+' :</span> <b>'+v+'</b></div>';
+  if (!st) { showSyncMsg('RECON indisponible', '<p>Statut RECON illisible pour l\'instant. Réessaie dans un moment.</p>'); return; }
+  if (actif) {
+    $('syncres-in').innerHTML = '<h2>RECON · lot en cours</h2>'+kv('Demandé le', frDT(l.demande_le))+kv('Statut', esc(l.status))+kv('Ajoutés pour l\'instant', nf(l.ajoutes))+kv('Doublons écartés', nf(l.doublons_ecartes))
+      + '<p class="mute" style="font-size:12.5px">Un seul lot à la fois. Les nouveaux prospects apparaissent dans la liste au fil de l\'eau.</p>'
+      + '<div class="btns"><button class="btn sec" id="rc-cancel">Annuler ce lot</button><button class="btn pri" id="sr-close">Fermer</button></div>';
+    $('syncres').style.display = 'flex'; $('sr-close').onclick = () => $('syncres').style.display = 'none'; $('rc-cancel').onclick = rcCancel; return;
+  }
+  if (!st.webhook_configure) { showSyncMsg('RECON · en attente de configuration', '<p>Le bouton est prêt, mais le lien de réveil de la routine RECON n\'est pas encore renseigné dans Supabase. Aucun lot ne peut être lancé pour l\'instant.</p><p class="mute">Configuration : secrets RECON_WEBHOOK_URL et RECON_WEBHOOK_KEY des Edge Functions.</p>'); return; }
+  $('syncres-in').innerHTML = '<h2>RECON · nouveau lot</h2>'
+    + '<p>Lancer un lot de <b>20 à 25 nouveaux prospects</b> (base « semaine référence ») ?</p>'
+    + '<p class="mute" style="font-size:12.5px">Chaque candidat est contrôlé contre toute la base (prospects, anciens onglets, historique, RDV) avant qualification, puis à nouveau à l\'ajout. Ajoutés avec F = À vérifier, G = Non contacté. Aucun mail, aucun brouillon. Un lot consomme des crédits Grok Bot côté RECON.</p>'
+    + '<div class="btns"><button class="btn sec" id="sr-close">Annuler</button><button class="btn pri" id="rc-go">Lancer le lot</button></div>';
+  $('syncres').style.display = 'flex'; $('sr-close').onclick = () => $('syncres').style.display = 'none'; $('rc-go').onclick = rcRun;
+}
+async function rcRun(){
+  if (RC.busy) return; RC.busy = true; $('syncres').style.display = 'none'; rcUi('run', 'Réveil de RECON…');
+  try {
+    let r; try { r = await callFn('recon-trigger', { action:'run' }); } catch(e) { r = { ok:false, status:0, data:{ error:String(e.message||e) } }; }
+    if (r.status === 409) toast('Un lot RECON est déjà en cours.');
+    else if (r.status === 412) showSyncMsg('RECON · en attente de configuration', '<p>'+esc(r.data.error)+'</p>');
+    else if (!r.ok) showSyncMsg('RECON non lancé', '<p>'+esc(r.data.error || ('Erreur '+r.status))+'</p><p class="mute">Aucun prospect ajouté. Tu peux recliquer plus tard.</p>');
+    else toast('Lot RECON demandé. Les prospects arriveront au fil de l\'eau.');
+  } finally { RC.busy = false; await rcInit(); }
+}
+async function rcCancel(){
+  const l = RC.st && RC.st.last; if (!l) return;
+  if (!confirm('Annuler ce lot RECON ? Les prospects déjà ajoutés restent en base.')) return;
+  const r = await callFn('recon-trigger', { action:'cancel', run_id: l.id });
+  $('syncres').style.display = 'none';
+  toast(r.ok && r.data.ok ? 'Lot RECON annulé.' : 'Annulation impossible : '+(r.data.error || 'lot déjà terminé'));
+  await rcInit();
+}
+$('recon-btn').onclick = rcAsk;
+$('recon-cancel').onclick = rcCancel;
 async function loadRowGmail(id){
   const box = $('p-gmail'); box.classList.add('hidden');
   const { data } = await sb.from('v_gmail_prospects').select('first_sent,n_envoyes,last_sent,first_reply,last_reply,n_recus,propal_at,rdv_at,rdv_annule,bounce_at').eq('prospect_id', id).maybeSingle();

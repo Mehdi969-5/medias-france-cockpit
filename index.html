@@ -219,6 +219,19 @@
   .login-card .hint{margin:0;color:var(--tx2);font-size:12.5px}
   .login-foot{display:flex;justify-content:space-between;margin-top:14px;font-size:11px;color:var(--mute)}
   .login-foot .on i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#7fae8a;margin-right:6px;vertical-align:1px}
+  /* SYNC Gmail */
+  .cmd .state i.ok{background:#7fae8a} .cmd .state i.run{background:var(--acc);animation:blink 1s ease-in-out infinite} .cmd .state i.warn{background:#d6a65c} .cmd .state i.err{background:#e08a82}
+  @keyframes blink{50%{opacity:.25}}
+  .cmd .prog{width:100px;height:3px;border-radius:3px;background:#262b31;overflow:hidden;display:none} .cmd .prog b{display:block;height:100%;width:0;background:var(--acc);transition:width .4s}
+  .cmd.running .prog{display:block}
+  #syncres{display:none;position:fixed;inset:0;z-index:70;background:rgba(5,7,9,.6);align-items:center;justify-content:center}
+  #syncres > div{width:560px;max-width:calc(100vw - 30px);max-height:calc(100vh - 60px);overflow:auto;background:#16191d;border:1px solid var(--line2);border-radius:12px;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  #syncres h2{margin:0 0 10px;font-size:16px;font-weight:600}
+  #syncres .kv b{color:var(--tx)} #syncres ul{margin:4px 0 8px 18px;padding:0;font-size:12.5px;color:var(--tx2)} #syncres li{margin:2px 0}
+  #syncres .inc{font-size:12px;color:var(--tx2);max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-top:4px}
+  #syncres .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+  #p-gmail{margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#14171a}
+  #p-gmail .t{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
   @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
   @media (max-width:1300px){ .gauge{width:100px} .screen{width:320px} .cmd .face{width:92px} }
 </style>
@@ -233,7 +246,7 @@
     <button data-v="journal">Journal des modifs</button>
   </nav>
   <div class="sp"></div>
-  <div class="dr hidden" id="dr" tabindex="0"><i></i>Double run<span class="tip"><strong>Le Google Sheet reste la référence</strong>Si je relance une resync Sheet vers base, elle écrase F, G, H et notes ici. Fais tes modifs dans le Sheet tant que la bascule n'est pas validée, ou préviens-moi avant une resync.</span></div>
+  <div class="dr hidden" id="dr" tabindex="0"><i></i>Double run<span class="tip"><strong>Le Google Sheet reste la référence</strong>Une resync Sheet vers base écrase F et les notes ici. G et les dates mises à jour par SYNC Gmail sont protégées : la resync ne les fait jamais reculer. Préviens-moi avant une resync.</span></div>
   <span class="who" id="who"></span>
   <button class="btn sec hidden" id="logout">Déconnexion</button>
 </header>
@@ -271,14 +284,15 @@
     <div class="deck">
       <div class="cmds">
         <div class="cmd" tabindex="0" data-cmd="sync">
-          <button class="face" disabled aria-label="SYNC"><span><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/></svg><b>SYNC</b></span></button>
-          <span class="state"><i></i><span class="st-txt">Bientôt disponible</span></span>
-          <span class="tip"><strong>SYNC · Gmail</strong>Met à jour les statuts de suivi (G) depuis Gmail : envois, réponses, relances.<span class="n" id="tip-sync"></span><span class="last">Dernier lancement : <span class="st-last">jamais</span></span></span>
+          <button class="face" id="sync-btn" aria-label="SYNC"><span><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/></svg><b>SYNC</b></span></button>
+          <span class="prog"><b id="sync-prog"></b></span>
+          <span class="state"><i id="sync-dot"></i><span class="st-txt" id="sync-st">…</span></span>
+          <span class="tip"><strong>SYNC · Gmail</strong>Met à jour les statuts de suivi (G) depuis ton Gmail pro : envois, relances, réponses, refus, RDV Calendly. Lecture seule : aucun mail envoyé, aucun brouillon. Le statut n'avance que vers l'avant et F n'est jamais touché.<span class="n" id="tip-sync"></span><span class="last">Dernier lancement : <span class="st-last" id="sync-last">jamais</span></span></span>
         </div>
         <div class="cmd" tabindex="0" data-cmd="impact">
-          <button class="face" disabled aria-label="IMPACT"><span><svg viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><b>IMPACT</b></span></button>
-          <span class="state"><i></i><span class="st-txt">Bientôt disponible</span></span>
-          <span class="tip"><strong>IMPACT · accroches</strong>Crée les accroches et les brouillons Gmail des prospects validés, jamais d'envoi automatique.<span class="n" id="tip-impact"></span><span class="last">Dernier lancement : <span class="st-last">jamais</span></span></span>
+          <button class="face" id="impact-btn" aria-label="IMPACT"><span><svg viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><b>IMPACT</b></span></button>
+          <span class="state"><i id="impact-dot"></i><span class="st-txt" id="impact-st">…</span></span>
+          <span class="tip"><strong>IMPACT · accroches</strong>Crée les brouillons Gmail d'accroche des prospects validés, par lots de 10 (du bas vers le haut) : modèle validé du média + une phrase personnalisée écrite par Gemini, contrôlée avant chaque brouillon. Jamais d'envoi : tu relis et tu envoies toi-même.<span class="n" id="tip-impact"></span><span class="last">Dernier lancement : <span class="st-last" id="impact-last">jamais</span></span></span>
         </div>
         <div class="cmd" tabindex="0" data-cmd="recon">
           <button class="face" disabled aria-label="RECON"><span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg><b>RECON</b></span></button>
@@ -287,8 +301,8 @@
         </div>
         <div class="cmdcol">
           <div class="cmd small" tabindex="0" data-cmd="relances">
-            <button class="face" disabled aria-label="Créer les relances"><span><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg><b>Relances</b></span></button>
-            <span class="tip"><strong>Créer les relances</strong>Prépare les brouillons de relance des mails restés sans réponse.<span class="n" id="tip-relances"></span><span class="last">Bientôt disponible</span></span>
+            <button class="face" id="relances-btn" aria-label="Créer les relances"><span><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg><b>Relances</b></span></button>
+            <span class="tip"><strong>Créer les relances</strong>Prépare les brouillons de Relance 1 (dans le fil de l'accroche) des mails restés sans réponse, selon ton calendrier : lun→mer, mar→jeu, mer→ven, jeu/ven→lun, fériés sautés. Vérifie avant chaque brouillon qu'il n'y a ni réponse, ni RDV, ni rebond. Jamais d'envoi.<span class="n" id="tip-relances"></span><span class="last">Dernier lancement : <span id="relances-last">jamais</span></span></span>
           </div>
         </div>
       </div>
@@ -331,7 +345,7 @@
   </section>
 
   <section id="v-journal" class="hidden">
-    <p class="mute">Les 300 dernières modifications de F, G, H et notes (interface ou resync).</p>
+    <p class="mute">Les 300 dernières modifications de F, G, H et notes (interface, resync ou SYNC Gmail).</p>
     <div class="tablewrap"><table><thead><tr><th>Quand</th><th>Entreprise</th><th>Champ</th><th>Avant</th><th>Après</th><th>Par</th></tr></thead><tbody id="jrows"></tbody></table></div>
   </section>
 </main>
@@ -342,6 +356,7 @@
     <button class="btn sec" id="p-close">Fermer</button>
   </div>
   <div id="p-info" style="margin-top:10px"></div>
+  <div id="p-gmail" class="hidden"></div>
   <label for="p-F">F · Validation Sellsy</label><select id="p-F"></select>
   <label for="p-G">G · Statut de suivi</label><select id="p-G"></select>
   <label for="p-H">H · Date accroche</label><input type="date" id="p-H">
@@ -351,6 +366,7 @@
   <div id="p-journal" class="mute">…</div>
 </aside>
 <div id="toast"></div>
+<div id="syncres" role="dialog" aria-modal="true"><div id="syncres-in"></div></div>
 
 <script>
 'use strict';
@@ -366,6 +382,7 @@ async function isAllowed(email){
 }
 const TABS = {nouveaux_prospects:'Nouveaux prospects V2', niches:'Prospection niches sociétales V2', lancements:'Lancements innovants V2', fou_du_bus:'fou du bus V2', canada:'Canada V2'};
 const F_VALUES = ['À vérifier','OK','OK créé','Non contactable','Non brûlé'];
+const DR = { impact:null, relance:null, busy:false }; // états IMPACT / Relances (Edge Functions)
 const G_VALUES = ['Non contacté','Brouillons ok','Mail envoyé','Relance 1','Relance 2','Répondu','RDV','Refus','Ko'];
 const COLS = 'id,source_tab,sheet_row,nom_entreprise,site_web,contact,email,media_cible,validation_sellsy,statut_suivi,date_accroche,date_relance,nb_relances,date_ajout,rdv_notes,produit_offre,signal_commercial,source_url,siren,updated_at';
 const PAGE = 100;
@@ -432,6 +449,8 @@ async function start(){
   $('login').classList.add('hidden'); $('nav').classList.remove('hidden'); $('dr').classList.remove('hidden');
   show('prospects');
   await loadProspects();
+  await syncInit();
+  drInit();
 }
 
 /* ---------- Navigation ---------- */
@@ -633,7 +652,7 @@ async function openPanel(r){
   opts('p-F', F_VALUES, r.validation_sellsy); opts('p-G', G_VALUES, r.statut_suivi); colorPanel();
   $('p-H').value = r.date_accroche || ''; $('p-L').value = r.rdv_notes || ''; $('p-msg').textContent = '';
   $('panel').style.display = 'block';
-  loadRowJournal(r.id);
+  loadRowJournal(r.id); loadRowGmail(r.id);
 }
 function colorPanel(){ $('p-F').setAttribute('style', hudVars(F_COLORS[$('p-F').value])); $('p-G').setAttribute('style', hudVars(G_COLORS[$('p-G').value])); }
 $('p-F').onchange = colorPanel; $('p-G').onchange = colorPanel;
@@ -697,11 +716,15 @@ $('csv').onclick = () => {
 const CONTACTES = ['Mail envoyé','Relance 1','Relance 2','Répondu','RDV','Refus'];
 const REPONSES = ['Répondu','RDV','Refus'];
 const okVals = () => (OPTS.F||[]).map(o=>o.v).filter(v => /^OK/.test(v));
-const isImpact = r => /^OK/.test(r.validation_sellsy||'') && r.statut_suivi==='Non contacté' && !r.date_accroche && !!(r.email||'').trim();
+const isAValider = r => (!r.validation_sellsy || r.validation_sellsy==='À vérifier') && (!r.statut_suivi || r.statut_suivi==='Non contacté');
+const IMPACT_MEDIAS = {'marie claire':1,'marie claire maison':1,'mcm':1,'challenges':1,'challenge':1,'madame figaro':1,'madama figaro':1,'le figaro':1,'figaro':1};
+const mediaKey = v => String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+const isImpact = r => /^OK/.test(r.validation_sellsy||'') && r.statut_suivi==='Non contacté' && !r.date_accroche && !!(r.nom_entreprise||'').trim()
+  && /[^\s@,;]+@[^\s@,;]+\.[a-z]{2,}/i.test(r.email||'') && !!IMPACT_MEDIAS[mediaKey(r.media_cible)];
 const QUICK = {
   all:      { lab:'Tout',              sel:{},                                         cnt: () => ALL.length },
-  valider:  { lab:'À valider',         sel:{F:['À vérifier','(vide)']},                cnt: () => ALL.filter(r => !r.validation_sellsy || r.validation_sellsy==='À vérifier').length, tip:'F vide ou À vérifier' },
-  impact:   { lab:'Prêts pour IMPACT', sel:()=>({F:okVals(), G:['Non contacté']}), extra:isImpact, cnt: () => ALL.filter(isImpact).length, tip:'F commence par OK, G = Non contacté, H vide, email présent' },
+  valider:  { lab:'À valider',         sel:{F:['À vérifier','(vide)'], G:['Non contacté','(vide)']}, extra:isAValider, cnt: () => ALL.filter(isAValider).length, tip:'F vide ou À vérifier, et jamais contacté (G = Non contacté ou vide). Contacté une fois = validé Sellsy.' },
+  impact:   { lab:'Prêts pour IMPACT', sel:()=>({F:okVals(), G:['Non contacté']}), extra:isImpact, cnt: () => ALL.filter(isImpact).length, tip:'F commence par OK, G = Non contacté, H vide, nom et email présents, média avec modèle (Marie Claire, Marie Claire Maison, Challenges, Madame Figaro, Le Figaro)' },
   relances: { lab:'En attente de réponse', sel:{G:['Mail envoyé','Relance 1','Relance 2']}, cnt: () => ALL.filter(r => ['Mail envoyé','Relance 1','Relance 2'].includes(r.statut_suivi)).length, tip:'G = Mail envoyé, Relance 1 ou Relance 2' },
   rdv:      { lab:'RDV',               sel:{G:['RDV']},                                cnt: () => ALL.filter(r => r.statut_suivi==='RDV').length, tip:'G = RDV' },
 };
@@ -748,7 +771,7 @@ function gauges(){
   const screen = '<div class="screen"><div><div class="scr-top"><span>Vue d\'ensemble</span><span>'+esc(today)+'</span></div>'
     + '<div class="scr-body"><div class="scr-big"><b>'+tot+'</b><span>prospects<br>en base</span></div><div class="scr-rows">'
     + row('valider','À valider (F)',QUICK.valider.cnt()) + row('impact','Prêts pour IMPACT',QUICK.impact.cnt()) + row('relances','En attente de réponse',QUICK.relances.cnt())
-    + '<div class="scr-row dim"><span>Dernière synchro Gmail</span><b>—</b></div></div></div></div></div>';
+    + '<div class="scr-row dim"><span>Dernière synchro Gmail</span><b id="scr-sync">'+esc(SYNC.lastTxt)+'</b></div></div></div></div></div>';
   $('gauges').innerHTML =
       g('contacter', aContacter/tot, aContacter, '', 'À contacter', pct(aContacter,tot)+' % du total', 'Validés Sellsy (F = OK ou commence par OK) et G = Non contacté, part du total. Clic : filtrer')
     + g('envoyes', contactes/tot, contactes, 'CONTACTÉS', 'Mails envoyés', pct(contactes,tot)+' % du total', 'G = Mail envoyé, Relance 1 ou 2, Répondu, RDV ou Refus, part du total. Clic : filtrer')
@@ -760,10 +783,10 @@ function gauges(){
   $('gauges').querySelectorAll('.scr-row[data-q]').forEach(e => e.onclick = () => setQuick(e.dataset.q));
   // Aides des commandes (affichées au survol seulement)
   const relancer = ALL.filter(r => ['Mail envoyé','Relance 1'].includes(G(r))).length;
-  $('tip-impact').innerHTML = '<b>'+QUICK.impact.cnt()+'</b> lignes éligibles (F commence par OK, G = Non contacté, H vide, email présent)';
+  $('tip-impact').innerHTML = '<b>'+(DR.impact ? DR.impact.eligibles : QUICK.impact.cnt())+'</b> lignes éligibles (F commence par OK, G = Non contacté, H vide, nom et email valides, média avec modèle)';
   $('tip-sync').innerHTML = '<b>'+ALL.filter(r => ['Mail envoyé','Relance 1','Relance 2'].includes(G(r))).length+'</b> lignes suivies (mail envoyé, relance 1 ou 2)';
   $('tip-recon').innerHTML = '<b>'+tot+'</b> prospects en base, dont <b>'+QUICK.valider.cnt()+'</b> à valider';
-  $('tip-relances').innerHTML = '<b>'+relancer+'</b> lignes à relancer (Mail envoyé ou Relance 1)';
+  $('tip-relances').innerHTML = DR.relance ? relTip(DR.relance) : '<b>'+relancer+'</b> lignes en attente de réponse';
 }
 /* ---------- Navigation au clavier ---------- */
 let KB = -1;
@@ -802,6 +825,208 @@ document.addEventListener('click', async e => {
   b.classList.remove('done','fail'); void b.offsetWidth; b.classList.add(ok ? 'done' : 'fail');
   clearTimeout(b._t); b._t = setTimeout(() => b.classList.remove('done','fail'), 1300);
 });
+
+/* ---------- SYNC Gmail (Edge Functions Supabase, zéro crédit Grok) ---------- */
+const SYNC = { busy:false, lastTxt:'—', status:null };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const nf = n => (n==null ? '0' : Number(n).toLocaleString('fr-FR'));
+async function callFn(name, body){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) throw new Error('Session expirée, reconnecte-toi.');
+  const r = await fetch(SUPABASE_URL+'/functions/v1/'+name, { method:'POST', headers:{ Authorization:'Bearer '+session.access_token, apikey:SUPABASE_KEY, 'Content-Type':'application/json' }, body: JSON.stringify(body||{}) });
+  let data = {}; try { data = await r.json(); } catch(_) {}
+  return { status:r.status, ok:r.ok, data };
+}
+function syncUi(state, txt, pctv){
+  const dot = $('sync-dot'), cmd = document.querySelector('.cmd[data-cmd="sync"]');
+  dot.className = state || ''; $('sync-st').textContent = txt;
+  cmd.classList.toggle('running', state==='run');
+  if (pctv!=null) $('sync-prog').style.width = Math.max(2, Math.min(100, pctv))+'%';
+}
+function setLast(iso){
+  SYNC.lastTxt = iso ? new Date(iso).toLocaleString('fr-FR',{timeZone:'Europe/Paris', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}).replace(' ', ' à ') : 'jamais';
+  if ($('scr-sync')) $('scr-sync').textContent = SYNC.lastTxt;
+  $('sync-last').textContent = iso ? frDT(iso) : 'jamais';
+}
+async function syncInit(){
+  const qs = new URLSearchParams(location.search), g = qs.get('google');
+  if (g) history.replaceState(null, '', location.pathname);
+  try {
+    const r = await callFn('gmail-sync', { action:'status' });
+    if (!r.ok) { syncUi('err', 'Indisponible'); return; }
+    const s = SYNC.status = r.data; setLast(s.last_sync_at);
+    if (!s.google_connected) syncUi('warn', 'Autoriser Google');
+    else if (s.phase === 'complet') syncUi('warn', 'À reprendre ('+pct(s.messages_read, s.messages_total)+' %)');
+    else if (s.phase === 'jamais') syncUi('ok', 'Prêt · 1re synchro complète');
+    else syncUi('ok', 'Prêt');
+  } catch(e) { syncUi('err', 'Indisponible'); }
+  if (g === 'ok') { toast('Google autorisé. La synchro complète démarre.'); syncRun(); }
+  else if (g === 'erreur') showSyncMsg('Autorisation Google non terminée', '<p>'+esc(qs.get('raison')||'Erreur inconnue')+'</p><p class="mute">Reclique sur SYNC pour réessayer, connecté avec ton compte Google pro.</p>');
+}
+async function syncAuth(){
+  syncUi('run', 'Ouverture de Google…');
+  const r = await callFn('google-oauth-start', {});
+  if (r.ok && r.data.url) { location.href = r.data.url; return; }
+  syncUi('err', 'Erreur'); showSyncMsg('Autorisation Google impossible', '<p>'+esc(r.data.error || ('Erreur '+r.status))+'</p>');
+}
+function warnLeave(e){ e.preventDefault(); e.returnValue = ''; }
+async function syncRun(){
+  if (SYNC.busy) return; SYNC.busy = true; window.addEventListener('beforeunload', warnLeave);
+  let fails = 0, busy = 0;
+  try {
+    syncUi('run', 'Connexion à Gmail…', 2);
+    while (true) {
+      let r;
+      try { r = await callFn('gmail-sync', { action:'run' }); }
+      catch(e) { r = { ok:false, status:0, data:{ error:String(e.message||e) } }; }
+      if (r.status === 409 && r.data.need_auth) { SYNC.busy = false; window.removeEventListener('beforeunload', warnLeave); return syncAuth(); }
+      if (r.status === 409 && r.data.busy) { if (++busy > 30) throw new Error(r.data.error); syncUi('run', 'Synchro déjà en cours, j\'attends…'); await sleep(5000); continue; }
+      if (!r.ok) { // coupure réseau ou limite de temps : la synchro reprend là où elle s'est arrêtée
+        if (++fails <= 4 && (r.status === 0 || r.status >= 500)) { syncUi('run', 'Reprise…'); await sleep(3000*fails); continue; }
+        throw new Error(r.data.error || ('Erreur '+r.status));
+      }
+      fails = 0; busy = 0;
+      const d = r.data;
+      if (!d.done) {
+        const p = d.messages_total ? pct(d.messages_read, d.messages_total) : null;
+        syncUi('run', d.mode === 'complet' ? ('Synchro complète · '+nf(d.messages_read)+(d.messages_total ? ' / '+nf(d.messages_total)+' mails' : ' mails')) : ('Nouveaux mails · '+nf(d.run_messages)), p==null ? 50 : Math.min(97, p));
+        continue;
+      }
+      syncUi('run', 'Mise à jour des statuts…', 100);
+      await loadProspects();
+      setLast(new Date().toISOString()); syncUi('ok', 'Prêt');
+      await showSyncSummary(d.summary, d.run_id);
+      break;
+    }
+  } catch(e) {
+    syncUi('err', 'Erreur · reclique pour reprendre');
+    showSyncMsg('Synchro interrompue', '<p>'+esc(e.message||e)+'</p><p class="mute">Rien n\'est perdu : un nouveau clic sur SYNC reprend là où elle s\'est arrêtée.</p>');
+  } finally { SYNC.busy = false; window.removeEventListener('beforeunload', warnLeave); }
+}
+$('sync-btn').onclick = () => { if (SYNC.status && !SYNC.status.google_connected) syncAuth(); else syncRun(); };
+function showSyncMsg(title, html){
+  $('syncres-in').innerHTML = '<h2>'+esc(title)+'</h2>'+html+'<div class="btns"><button class="btn sec" id="sr-close">Fermer</button></div>';
+  $('syncres').style.display = 'flex'; $('sr-close').onclick = () => $('syncres').style.display = 'none';
+}
+async function showSyncSummary(s, runId){
+  s = s || {};
+  const st = s.statuts || {}, keys = G_VALUES.filter(k => st[k]);
+  const { data: inc } = await sb.from('v_gmail_incertains').select('nom_entreprise,adresses,n_envoyes,n_recus,dernier').order('dernier',{ascending:false}).limit(60);
+  const kv = (l, v) => '<div class="kv"><span>'+l+' :</span> <b>'+v+'</b></div>';
+  let h = kv('Mails lus', nf(s.messages_lus)) + kv('Mails liés à un prospect', nf(s.messages_rapproches))
+    + kv('Prospects mis à jour', nf(s.prospects_maj))
+    + (keys.length ? '<ul>'+keys.map(k => '<li>'+esc(k)+' : <b>'+nf(st[k])+'</b></li>').join('')+'</ul>' : '<div class="kv mute">Aucun statut à faire avancer.</div>')
+    + kv('Validés Sellsy automatiquement (F → OK)', nf(s.valides_sellsy))
+    + kv('Dates d\'accroche (H) ajoutées', nf(s.dates_accroche)) + kv('Relances (I/J) renseignées', nf(s.relances))
+    + kv('Prospects avec une proposition / devis envoyé', nf(s.propals))
+    + (s.non_appliques_statut_fige ? kv('Non modifiés car déjà en Refus, Ko ou RDV', nf(s.non_appliques_statut_fige)) : '')
+    + (s.recus_sans_envoi ? kv('Mails reçus sans envoi de ta part (statut inchangé)', nf(s.recus_sans_envoi)) : '')
+    + kv('Rapprochements incertains (même domaine, rien de modifié)', nf(s.incertains));
+  if (inc && inc.length) h += '<div class="inc">'+inc.map(x => '<div>'+esc(x.nom_entreprise)+' · '+esc(x.adresses)+' · '+x.n_envoyes+' envoyé(s), '+x.n_recus+' reçu(s)</div>').join('')+'</div>';
+  $('syncres-in').innerHTML = '<h2>Synchro Gmail terminée</h2>'+h+'<p class="mute" style="font-size:12px">Chaque changement est dans le Journal des modifs (par « SYNC Gmail ») et peut être annulé.</p>'
+    + '<div class="btns">'+(s.prospects_maj ? '<button class="btn sec" id="sr-undo">Annuler cette synchro</button>' : '')+'<button class="btn pri" id="sr-close">Fermer</button></div>';
+  $('syncres').style.display = 'flex';
+  $('sr-close').onclick = () => $('syncres').style.display = 'none';
+  if ($('sr-undo')) $('sr-undo').onclick = async () => {
+    if (!confirm('Remettre les statuts et dates d\'avant cette synchro ? Les lignes modifiées depuis à la main ne sont pas touchées.')) return;
+    const r = await callFn('gmail-sync', { action:'undo', run_id: runId });
+    if (!r.ok) { toast('Annulation impossible : '+(r.data.error||r.status)); return; }
+    $('syncres').style.display = 'none'; toast(r.data.result.annules+' changement(s) annulé(s)'); await loadProspects();
+  };
+}
+/* ---------- IMPACT et Relances : brouillons Gmail uniquement (Edge Functions impact-drafts / relance-drafts) ---------- */
+function drUi(kind, state, txt){
+  if (kind === 'impact') { $('impact-dot').className = state || ''; $('impact-st').textContent = txt; document.querySelector('.cmd[data-cmd="impact"]').classList.toggle('running', state==='run'); }
+  else { const b = $('relances-btn'); b.classList.toggle('busy', state==='run'); b.querySelector('b').textContent = state==='run' ? 'Relances…' : 'Relances'; }
+}
+function relTip(r){
+  if (!r.jour_ouvre) return 'Aujourd\'hui n\'est pas un jour ouvré : aucune relance. Prochaine échéance : <b>'+frDate(r.prochaine_echeance)+'</b>';
+  return '<b>'+r.a_relancer_aujourdhui+'</b> à relancer aujourd\'hui'+(r.anciennes_non_relancees ? ' · '+r.anciennes_non_relancees+' plus anciennes non traitées (règle du 04/11 : lot du jour seulement)' : '')
+    + (r.prochaine_echeance ? ' · prochaine échéance : '+frDate(r.prochaine_echeance) : '') + ' · max '+r.max_par_jour+'/jour, déjà '+r.deja_crees_aujourdhui;
+}
+async function drInit(){
+  try {
+    const [a, b] = await Promise.all([callFn('impact-drafts', { action:'status' }), callFn('relance-drafts', { action:'status' })]);
+    if (a.ok) { DR.impact = a.data; drUi('impact', a.data.eligibles ? 'ok' : 'warn', a.data.eligibles ? 'Prêt · '+a.data.eligibles+' éligibles' : 'Aucune ligne éligible');
+      if (a.data.last_run) $('impact-last').textContent = frDT(a.data.last_run.started_at); }
+    else drUi('impact', 'err', 'Indisponible');
+    if (b.ok) { DR.relance = b.data; if (b.data.last_run) $('relances-last').textContent = frDT(b.data.last_run.started_at); }
+    if (a.ok) $('tip-impact').innerHTML = '<b>'+a.data.eligibles+'</b> lignes éligibles (F commence par OK, G = Non contacté, H vide, nom et email valides, média avec modèle)';
+    if (b.ok) $('tip-relances').innerHTML = relTip(b.data);
+  } catch(e) { drUi('impact', 'err', 'Indisponible'); }
+}
+function drAsk(kind){
+  if (DR.busy) return;
+  const im = kind === 'impact', st = im ? DR.impact : DR.relance;
+  let info = '';
+  if (im) {
+    const pm = st && st.par_media ? Object.entries(st.par_media).map(([k,v]) => '<li>'+esc(k)+' : <b>'+v+'</b></li>').join('') : '';
+    info = '<div class="kv"><span>Lignes éligibles :</span> <b>'+(st ? st.eligibles : '?')+'</b></div>'+(pm ? '<ul>'+pm+'</ul>' : '')
+      + '<p class="mute" style="font-size:12.5px">Chaque brouillon = modèle validé du média + une phrase personnalisée (Gemini) à partir du produit / signal de la ligne. Contrôles avant création : nom de l\'entreprise, bon média, bon destinataire, longueur, aucun texte à compléter, aucun doublon dans Gmail. Les lignes qui ne passent pas sont mises de côté avec la raison. G passe à « Brouillons ok ».</p>';
+  } else {
+    info = st ? '<p>'+relTip(st)+'</p>' : '';
+    info += '<p class="mute" style="font-size:12.5px">Relance 1 uniquement (modèle officiel), dans le fil de l\'accroche. Avant chaque brouillon : aucune réponse, aucun RDV Calendly, aucun rebond, rien reçu du même domaine, pas de brouillon déjà présent. Pense à lancer SYNC avant. Google Agenda n\'est pas consulté : vérifie tes RDV du jour. G passe à « Relance 1 ».</p>';
+  }
+  $('syncres-in').innerHTML = '<h2>'+(im ? 'IMPACT · brouillons d\'accroche' : 'Relances · brouillons')+'</h2>'+info
+    + '<p style="font-size:12.5px"><b>Aucun mail n\'est envoyé.</b> Les brouillons apparaissent dans Gmail, tu les relis et tu les envoies toi-même.</p>'
+    + '<div class="btns"><button class="btn sec" id="sr-close">Annuler</button><button class="btn sec" id="dr-test">Test : 3 brouillons</button><button class="btn pri" id="dr-lot">Lot de 10</button></div>';
+  $('syncres').style.display = 'flex';
+  $('sr-close').onclick = () => $('syncres').style.display = 'none';
+  $('dr-test').onclick = () => drRun(kind, 3);
+  $('dr-lot').onclick = () => drRun(kind, 10);
+}
+async function drRun(kind, limit){
+  if (DR.busy) return; DR.busy = true;
+  const im = kind === 'impact', fn = im ? 'impact-drafts' : 'relance-drafts';
+  $('syncres').style.display = 'none';
+  drUi(kind, 'run', limit === 3 ? 'Test · 3 brouillons…' : 'Création des brouillons…');
+  window.addEventListener('beforeunload', warnLeave);
+  try {
+    let r;
+    try { r = await callFn(fn, { action:'run', limit }); } catch(e) { r = { ok:false, status:0, data:{ error:String(e.message||e) } }; }
+    if (r.status === 409 && r.data.need_auth) { showSyncMsg('Autorisation Google nécessaire', '<p>'+esc(r.data.error)+'</p><p class="mute">Clique sur SYNC pour reconnecter Google, puis relance.</p>'); return; }
+    if (!r.ok && !r.data.run_id) throw new Error(r.data.error || ('Erreur '+r.status));
+    await loadProspects();
+    drSummary(kind, r.data);
+  } catch(e) {
+    showSyncMsg(im ? 'IMPACT interrompu' : 'Relances interrompues', '<p>'+esc(e.message||e)+'</p><p class="mute">Si des brouillons ont été créés avant l\'erreur, ils sont dans le journal et le prochain lot repart des lignes restantes.</p>');
+  } finally { DR.busy = false; window.removeEventListener('beforeunload', warnLeave); await drInit(); }
+}
+function drSummary(kind, d){
+  const im = kind === 'impact', items = d.items || [], sk = d.skipped || [];
+  const kv = (l, v) => '<div class="kv"><span>'+l+' :</span> <b>'+v+'</b></div>';
+  let h = (d.error ? '<p style="color:#e08a82">'+esc(d.error)+'</p>' : '') + kv('Brouillons créés', nf(items.length)+(d.mode==='test' ? ' (test, max 3)' : ''));
+  if (items.length) h += '<div class="inc">'+items.map(x => '<div><b>'+esc(x.entreprise)+'</b> · '+esc(x.email)+' · '+esc(x.media||'')+(im && x.accroche ? '<br><span style="color:var(--tx)">« '+esc(x.accroche)+' »</span>' : '')+'</div>').join('')+'</div>';
+  h += kv('Lignes mises de côté', nf(sk.length));
+  if (sk.length) h += '<div class="inc">'+sk.map(x => '<div><b>'+esc(x.entreprise||'?')+'</b> · '+esc(x.email||'')+' — '+esc(x.raison)+'</div>').join('')+'</div>';
+  if (!im && d.anciennes_non_relancees) h += '<p class="mute" style="font-size:12px">'+nf(d.anciennes_non_relancees)+' accroches plus anciennes restent sans relance (non traitées : lot du jour seulement).</p>';
+  h += '<p class="mute" style="font-size:12px">Brouillons à relire dans Gmail. Rien n\'a été envoyé. '+(im ? 'G = « Brouillons ok » ; H sera rempli par SYNC quand tu enverras.' : 'G = « Relance 1 » ; la date (I) sera remplie par SYNC à l\'envoi.')+'</p>';
+  $('syncres-in').innerHTML = '<h2>'+(im ? 'IMPACT terminé' : 'Relances terminées')+'</h2>'+h
+    + '<div class="btns">'+(items.length && d.run_id ? '<button class="btn sec" id="dr-undo">Annuler ce lot</button>' : '')+'<button class="btn pri" id="sr-close">Fermer</button></div>';
+  $('syncres').style.display = 'flex';
+  $('sr-close').onclick = () => $('syncres').style.display = 'none';
+  if ($('dr-undo')) $('dr-undo').onclick = async () => {
+    if (!confirm('Supprimer les brouillons de ce lot encore non envoyés et remettre les statuts d\'avant ? Un brouillon déjà envoyé n\'est pas touché (signalé).')) return;
+    const r = await callFn(im ? 'impact-drafts' : 'relance-drafts', { action:'undo', run_id: d.run_id });
+    if (!r.ok) { toast('Annulation impossible : '+(r.data.error||r.status)); return; }
+    $('syncres').style.display = 'none';
+    await loadProspects(); await drInit();
+    toast(r.data.annules+' brouillon(s) supprimé(s)'+(r.data.deja_envoyes ? ', '+r.data.deja_envoyes+' déjà envoyé(s) laissé(s)' : '')+(r.data.statut_garde ? ', '+r.data.statut_garde+' statut(s) gardé(s)' : ''));
+  };
+}
+$('impact-btn').onclick = () => drAsk('impact');
+$('relances-btn').onclick = () => drAsk('relances');
+async function loadRowGmail(id){
+  const box = $('p-gmail'); box.classList.add('hidden');
+  const { data } = await sb.from('v_gmail_prospects').select('first_sent,n_envoyes,last_sent,first_reply,last_reply,n_recus,propal_at,rdv_at,rdv_annule,bounce_at').eq('prospect_id', id).maybeSingle();
+  if (!data || current?.id !== id) return;
+  const d = v => v ? new Date(v).toLocaleDateString('fr-FR',{timeZone:'Europe/Paris'}) : '';
+  const kv = (k,v) => v ? '<div class="kv"><span>'+k+' :</span> '+v+'</div>' : '';
+  box.innerHTML = '<div class="t">Gmail</div>' + kv('Envoyés', data.n_envoyes ? nf(data.n_envoyes)+' (1er le '+d(data.first_sent)+', dernier le '+d(data.last_sent)+')' : '')
+    + kv('Réponses', data.n_recus ? nf(data.n_recus)+' (1re le '+d(data.first_reply)+', dernière le '+d(data.last_reply)+')' : '')
+    + kv('Proposition / devis envoyé', d(data.propal_at)) + kv('RDV Calendly', data.rdv_at ? d(data.rdv_at)+(data.rdv_annule?' (annulé)':'') : '') + kv('Non-remise', d(data.bounce_at));
+  box.classList.remove('hidden');
+}
 
 /* ---------- Site web : colonne site_web, sinon domaine de l'email pro (marqué « déduit ») ---------- */
 const FREE_MAIL = new Set(['gmail','googlemail','hotmail','outlook','live','msn','yahoo','icloud','me','mac','orange','free','laposte','wanadoo','sfr','neuf','aol','gmx','proton','protonmail']);

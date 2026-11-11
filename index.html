@@ -146,6 +146,10 @@
   .tablewrap{overflow:auto;background:var(--panel)}
   table{border-collapse:separate;border-spacing:0;width:100%}
   th{position:sticky;top:0;z-index:2;background:#1b1f23;color:var(--mute);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line2);white-space:nowrap}
+  .sortbtn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:5px;padding:0;vertical-align:-4px;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--mute);cursor:pointer;opacity:.7}
+  .sortbtn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .sortbtn:hover{opacity:1;color:var(--tx);background:#262c33;border-color:var(--line2)}
+  .sortbtn.on{opacity:1;color:var(--acc)}
   td{padding:3px 10px;border-bottom:1px solid #22272c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;color:var(--tx2)}
   #rows td:first-child{color:var(--mute);font-size:12px;box-shadow:inset 3px 0 0 var(--rowc,transparent);width:56px}
   #rows td:nth-child(2){max-width:200px;color:#eef1f4} #rows td:nth-child(2) b{font-weight:600}
@@ -329,7 +333,7 @@
       <div class="stats" id="stats"></div>
       <div class="tablewrap">
         <table>
-          <thead><tr><th title="Ligne dans l'onglet du Sheet (onglet au survol)">Ligne</th><th>Entreprise</th><th>Site web</th><th>Email</th><th>Média</th><th>F · Validation Sellsy</th><th>G · Statut suivi</th><th>H accroche</th><th>Relances</th><th>Notes</th></tr></thead>
+          <thead><tr><th title="Ligne dans l'onglet du Sheet (onglet au survol)">Ligne<button type="button" id="sort-chrono" class="sortbtn" aria-label="Trier par date d'ajout"></button></th><th>Entreprise</th><th>Site web</th><th>Email</th><th>Média</th><th>F · Validation Sellsy</th><th>G · Statut suivi</th><th>H accroche</th><th>Relances</th><th>Notes</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
@@ -388,7 +392,7 @@ const TABS = {nouveaux_prospects:'Nouveaux prospects V2', niches:'Prospection ni
 const F_VALUES = ['À vérifier','OK','OK créé','Non contactable','Non brûlé'];
 const DR = { impact:null, relance:null, busy:false }; // états IMPACT / Relances (Edge Functions)
 const G_VALUES = ['Non contacté','Brouillons ok','Mail envoyé','Relance 1','Relance 2','Répondu','RDV','Refus','Ko'];
-const COLS = 'id,source_tab,sheet_row,nom_entreprise,site_web,contact,email,media_cible,validation_sellsy,statut_suivi,date_accroche,date_relance,nb_relances,date_ajout,rdv_notes,produit_offre,signal_commercial,source_url,siren,updated_at';
+const COLS = 'id,source_tab,sheet_row,nom_entreprise,site_web,contact,email,media_cible,validation_sellsy,statut_suivi,date_accroche,date_relance,nb_relances,date_ajout,rdv_notes,produit_offre,signal_commercial,source_url,siren,updated_at,created_at';
 const PAGE = 100;
 // Couleurs reprises de la mise en forme conditionnelle des 5 onglets V2 du Sheet (lue le 10/11/2026).
 // F colore toute la ligne A:O ; G colore la cellule G. Valeur absente = pas de couleur dans le Sheet (neutre).
@@ -573,6 +577,7 @@ function filterText(){
   const q = norm($('f-q').value.trim());
   const base = QV && QUICK[QV].extra ? SERVER.filter(QUICK[QV].extra) : SERVER;
   VIEW = q ? base.filter(r => norm([r.nom_entreprise,r.email,r.site_web,r.contact,r.rdv_notes,r.media_cible,r.siren].join(' ')).includes(q)) : base.slice();
+  if (SORT) VIEW.sort(chronoCmp);
   stats(); render();
 }
 function stats(){
@@ -1130,6 +1135,26 @@ function siteKv(r){
   const s = siteOf(r); if (!s) return '';
   return '<div class="kv"><span>Site :</span> <a href="'+esc(safeUrl(s.url))+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a>'+(s.deduit?' <span class="ded">déduit</span>':'')+' '+cpBtn(s.url, true, 'site')+'</div>';
 }
+
+/* ---------- Tri chronologique (bouton à côté de « Ligne ») ---------- */
+// Date d'ajout (K, date_ajout) ; sans date = plus ancien. Départage : created_at (insertion en base), puis numéro de ligne (vide = ajout récent par le cockpit).
+let SORT = null; // null = ordre d'origine (onglet puis ligne), 'desc' = plus récent d'abord, 'asc' = plus ancien d'abord
+function chronoCmp(a, b){
+  const da = a.date_ajout || '', db = b.date_ajout || '';
+  let c = da < db ? -1 : da > db ? 1 : 0;
+  if (!c) { const ca = a.created_at || '', cb = b.created_at || ''; c = ca < cb ? -1 : ca > cb ? 1 : 0; }
+  if (!c) { const sa = a.sheet_row == null ? Infinity : +a.sheet_row, sb2 = b.sheet_row == null ? Infinity : +b.sheet_row; c = sa < sb2 ? -1 : sa > sb2 ? 1 : 0; }
+  return SORT === 'desc' ? -c : c;
+}
+function sortIcon(){
+  const b = $('sort-chrono'); if (!b) return;
+  const ic = SORT === 'desc' ? '<path d="M12 5v14"/><path d="m6 13 6 6 6-6"/>' : SORT === 'asc' ? '<path d="M12 19V5"/><path d="m6 11 6-6 6 6"/>' : '<path d="M8 4v16"/><path d="m4 16 4 4 4-4"/><path d="M16 20V4"/><path d="m12 8 4-4 4 4"/>';
+  b.innerHTML = '<svg viewBox="0 0 24 24">'+ic+'</svg>';
+  b.classList.toggle('on', !!SORT);
+  b.title = SORT === 'desc' ? "Plus récent d'abord (date d'ajout). Clic : plus ancien d'abord" : SORT === 'asc' ? "Plus ancien d'abord (date d'ajout). Clic : plus récent d'abord" : "Trier par date d'ajout : plus récent d'abord";
+}
+$('sort-chrono').onclick = e => { e.stopPropagation(); SORT = SORT === 'desc' ? 'asc' : 'desc'; sortIcon(); page = 0; filterText(); };
+sortIcon();
 
 start();
 </script>

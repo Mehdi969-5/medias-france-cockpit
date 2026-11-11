@@ -292,7 +292,7 @@
         <div class="cmd" tabindex="0" data-cmd="impact">
           <button class="face" id="impact-btn" aria-label="IMPACT"><span><svg viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><b>IMPACT</b></span></button>
           <span class="state"><i id="impact-dot"></i><span class="st-txt" id="impact-st">…</span></span>
-          <span class="tip"><strong>IMPACT · accroches</strong>Crée les brouillons Gmail d'accroche des prospects validés, par lots de 10 (du bas vers le haut) : modèle validé du média + une phrase personnalisée écrite par Gemini, contrôlée avant chaque brouillon. Jamais d'envoi : tu relis et tu envoies toi-même.<span class="n" id="tip-impact"></span><span class="last">Dernier lancement : <span class="st-last" id="impact-last">jamais</span></span></span>
+          <span class="tip"><strong>IMPACT · accroches</strong>Crée les brouillons Gmail d'accroche des prospects validés, par lots de 10 (du bas vers le haut) : modèle validé du média + nom de l'entreprise, contrôlé avant chaque brouillon. Jamais d'envoi : tu relis et tu envoies toi-même.<span class="n" id="tip-impact"></span><span class="last">Dernier lancement : <span class="st-last" id="impact-last">jamais</span></span></span>
         </div>
         <div class="cmd" tabindex="0" data-cmd="recon">
           <button class="face" disabled aria-label="RECON"><span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg><b>RECON</b></span></button>
@@ -962,7 +962,7 @@ function drAsk(kind){
   if (im) {
     const pm = st && st.par_media ? Object.entries(st.par_media).map(([k,v]) => '<li>'+esc(k)+' : <b>'+v+'</b></li>').join('') : '';
     info = '<div class="kv"><span>Lignes éligibles :</span> <b>'+(st ? st.eligibles : '?')+'</b></div>'+(pm ? '<ul>'+pm+'</ul>' : '')
-      + '<p class="mute" style="font-size:12.5px">Chaque brouillon = modèle validé du média + une phrase personnalisée (Gemini) à partir du produit / signal de la ligne. Contrôles avant création : nom de l\'entreprise, bon média, bon destinataire, longueur, aucun texte à compléter, aucun doublon dans Gmail. Les lignes qui ne passent pas sont mises de côté avec la raison. G passe à « Brouillons ok ».</p>';
+      + '<p class="mute" style="font-size:12.5px">Chaque brouillon = modèle validé du média + nom de l\'entreprise (colonne A), sans autre personnalisation. Contrôles avant création : nom de l\'entreprise, bon média, bon destinataire, aucun texte à compléter, aucun doublon dans Gmail. Les lignes qui ne passent pas sont mises de côté avec la raison. G passe à « Brouillons ok ».</p>';
   } else {
     info = st ? '<p>'+relTip(st)+'</p>' : '';
     info += '<p class="mute" style="font-size:12.5px">Relance 1 uniquement (modèle officiel), dans le fil de l\'accroche. Avant chaque brouillon : aucune réponse, aucun RDV Calendly, aucun rebond, rien reçu du même domaine, pas de brouillon déjà présent. Pense à lancer SYNC avant. Google Agenda n\'est pas consulté : vérifie tes RDV du jour. G passe à « Relance 1 ».</p>';

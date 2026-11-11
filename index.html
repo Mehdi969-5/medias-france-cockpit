@@ -288,9 +288,9 @@
           <span class="tip"><strong>SYNC · Gmail</strong>Met à jour les statuts de suivi (G) depuis ton Gmail pro : envois, relances, réponses, refus, RDV Calendly. Lecture seule : aucun mail envoyé, aucun brouillon. Le statut n'avance que vers l'avant et F n'est jamais touché.<span class="n" id="tip-sync"></span><span class="last">Dernier lancement : <span class="st-last" id="sync-last">jamais</span></span></span>
         </div>
         <div class="cmd" tabindex="0" data-cmd="impact">
-          <button class="face" disabled aria-label="IMPACT"><span><svg viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><b>IMPACT</b></span></button>
-          <span class="state"><i></i><span class="st-txt">Bientôt disponible</span></span>
-          <span class="tip"><strong>IMPACT · accroches</strong>Crée les accroches et les brouillons Gmail des prospects validés, jamais d'envoi automatique.<span class="n" id="tip-impact"></span><span class="last">Dernier lancement : <span class="st-last">jamais</span></span></span>
+          <button class="face" id="impact-btn" aria-label="IMPACT"><span><svg viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><b>IMPACT</b></span></button>
+          <span class="state"><i id="impact-dot"></i><span class="st-txt" id="impact-st">…</span></span>
+          <span class="tip"><strong>IMPACT · accroches</strong>Crée les brouillons Gmail d'accroche des prospects validés, par lots de 10 (du bas vers le haut) : modèle validé du média + une phrase personnalisée écrite par Gemini, contrôlée avant chaque brouillon. Jamais d'envoi : tu relis et tu envoies toi-même.<span class="n" id="tip-impact"></span><span class="last">Dernier lancement : <span class="st-last" id="impact-last">jamais</span></span></span>
         </div>
         <div class="cmd" tabindex="0" data-cmd="recon">
           <button class="face" disabled aria-label="RECON"><span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg><b>RECON</b></span></button>
@@ -299,8 +299,8 @@
         </div>
         <div class="cmdcol">
           <div class="cmd small" tabindex="0" data-cmd="relances">
-            <button class="face" disabled aria-label="Créer les relances"><span><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg><b>Relances</b></span></button>
-            <span class="tip"><strong>Créer les relances</strong>Prépare les brouillons de relance des mails restés sans réponse.<span class="n" id="tip-relances"></span><span class="last">Bientôt disponible</span></span>
+            <button class="face" id="relances-btn" aria-label="Créer les relances"><span><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg><b>Relances</b></span></button>
+            <span class="tip"><strong>Créer les relances</strong>Prépare les brouillons de Relance 1 (dans le fil de l'accroche) des mails restés sans réponse, selon ton calendrier : lun→mer, mar→jeu, mer→ven, jeu/ven→lun, fériés sautés. Vérifie avant chaque brouillon qu'il n'y a ni réponse, ni RDV, ni rebond. Jamais d'envoi.<span class="n" id="tip-relances"></span><span class="last">Dernier lancement : <span id="relances-last">jamais</span></span></span>
           </div>
         </div>
       </div>
@@ -380,6 +380,7 @@ async function isAllowed(email){
 }
 const TABS = {nouveaux_prospects:'Nouveaux prospects V2', niches:'Prospection niches sociétales V2', lancements:'Lancements innovants V2', fou_du_bus:'fou du bus V2', canada:'Canada V2'};
 const F_VALUES = ['À vérifier','OK','OK créé','Non contactable','Non brûlé'];
+const DR = { impact:null, relance:null, busy:false }; // états IMPACT / Relances (Edge Functions)
 const G_VALUES = ['Non contacté','Brouillons ok','Mail envoyé','Relance 1','Relance 2','Répondu','RDV','Refus','Ko'];
 const COLS = 'id,source_tab,sheet_row,nom_entreprise,site_web,contact,email,media_cible,validation_sellsy,statut_suivi,date_accroche,date_relance,nb_relances,date_ajout,rdv_notes,produit_offre,signal_commercial,source_url,siren,updated_at';
 const PAGE = 100;
@@ -447,6 +448,7 @@ async function start(){
   show('prospects');
   await loadProspects();
   await syncInit();
+  drInit();
 }
 
 /* ---------- Navigation ---------- */
@@ -713,11 +715,14 @@ const CONTACTES = ['Mail envoyé','Relance 1','Relance 2','Répondu','RDV','Refu
 const REPONSES = ['Répondu','RDV','Refus'];
 const okVals = () => (OPTS.F||[]).map(o=>o.v).filter(v => /^OK/.test(v));
 const isAValider = r => (!r.validation_sellsy || r.validation_sellsy==='À vérifier') && (!r.statut_suivi || r.statut_suivi==='Non contacté');
-const isImpact = r => /^OK/.test(r.validation_sellsy||'') && r.statut_suivi==='Non contacté' && !r.date_accroche && !!(r.email||'').trim();
+const IMPACT_MEDIAS = {'marie claire':1,'marie claire maison':1,'mcm':1,'challenges':1,'challenge':1,'madame figaro':1,'madama figaro':1,'le figaro':1,'figaro':1};
+const mediaKey = v => String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+const isImpact = r => /^OK/.test(r.validation_sellsy||'') && r.statut_suivi==='Non contacté' && !r.date_accroche && !!(r.nom_entreprise||'').trim()
+  && /[^\s@,;]+@[^\s@,;]+\.[a-z]{2,}/i.test(r.email||'') && !!IMPACT_MEDIAS[mediaKey(r.media_cible)];
 const QUICK = {
   all:      { lab:'Tout',              sel:{},                                         cnt: () => ALL.length },
   valider:  { lab:'À valider',         sel:{F:['À vérifier','(vide)'], G:['Non contacté','(vide)']}, extra:isAValider, cnt: () => ALL.filter(isAValider).length, tip:'F vide ou À vérifier, et jamais contacté (G = Non contacté ou vide). Contacté une fois = validé Sellsy.' },
-  impact:   { lab:'Prêts pour IMPACT', sel:()=>({F:okVals(), G:['Non contacté']}), extra:isImpact, cnt: () => ALL.filter(isImpact).length, tip:'F commence par OK, G = Non contacté, H vide, email présent' },
+  impact:   { lab:'Prêts pour IMPACT', sel:()=>({F:okVals(), G:['Non contacté']}), extra:isImpact, cnt: () => ALL.filter(isImpact).length, tip:'F commence par OK, G = Non contacté, H vide, nom et email présents, média avec modèle (Marie Claire, Marie Claire Maison, Challenges, Madame Figaro, Le Figaro)' },
   relances: { lab:'En attente de réponse', sel:{G:['Mail envoyé','Relance 1','Relance 2']}, cnt: () => ALL.filter(r => ['Mail envoyé','Relance 1','Relance 2'].includes(r.statut_suivi)).length, tip:'G = Mail envoyé, Relance 1 ou Relance 2' },
   rdv:      { lab:'RDV',               sel:{G:['RDV']},                                cnt: () => ALL.filter(r => r.statut_suivi==='RDV').length, tip:'G = RDV' },
 };
@@ -776,10 +781,10 @@ function gauges(){
   $('gauges').querySelectorAll('.scr-row[data-q]').forEach(e => e.onclick = () => setQuick(e.dataset.q));
   // Aides des commandes (affichées au survol seulement)
   const relancer = ALL.filter(r => ['Mail envoyé','Relance 1'].includes(G(r))).length;
-  $('tip-impact').innerHTML = '<b>'+QUICK.impact.cnt()+'</b> lignes éligibles (F commence par OK, G = Non contacté, H vide, email présent)';
+  $('tip-impact').innerHTML = '<b>'+(DR.impact ? DR.impact.eligibles : QUICK.impact.cnt())+'</b> lignes éligibles (F commence par OK, G = Non contacté, H vide, nom et email valides, média avec modèle)';
   $('tip-sync').innerHTML = '<b>'+ALL.filter(r => ['Mail envoyé','Relance 1','Relance 2'].includes(G(r))).length+'</b> lignes suivies (mail envoyé, relance 1 ou 2)';
   $('tip-recon').innerHTML = '<b>'+tot+'</b> prospects en base, dont <b>'+QUICK.valider.cnt()+'</b> à valider';
-  $('tip-relances').innerHTML = '<b>'+relancer+'</b> lignes à relancer (Mail envoyé ou Relance 1)';
+  $('tip-relances').innerHTML = DR.relance ? relTip(DR.relance) : '<b>'+relancer+'</b> lignes en attente de réponse';
 }
 /* ---------- Navigation au clavier ---------- */
 let KB = -1;
@@ -927,6 +932,88 @@ async function showSyncSummary(s, runId){
     $('syncres').style.display = 'none'; toast(r.data.result.annules+' changement(s) annulé(s)'); await loadProspects();
   };
 }
+/* ---------- IMPACT et Relances : brouillons Gmail uniquement (Edge Functions impact-drafts / relance-drafts) ---------- */
+function drUi(kind, state, txt){
+  if (kind === 'impact') { $('impact-dot').className = state || ''; $('impact-st').textContent = txt; document.querySelector('.cmd[data-cmd="impact"]').classList.toggle('running', state==='run'); }
+  else { const b = $('relances-btn'); b.classList.toggle('busy', state==='run'); b.querySelector('b').textContent = state==='run' ? 'Relances…' : 'Relances'; }
+}
+function relTip(r){
+  if (!r.jour_ouvre) return 'Aujourd\'hui n\'est pas un jour ouvré : aucune relance. Prochaine échéance : <b>'+frDate(r.prochaine_echeance)+'</b>';
+  return '<b>'+r.a_relancer_aujourdhui+'</b> à relancer aujourd\'hui'+(r.anciennes_non_relancees ? ' · '+r.anciennes_non_relancees+' plus anciennes non traitées (règle du 04/11 : lot du jour seulement)' : '')
+    + (r.prochaine_echeance ? ' · prochaine échéance : '+frDate(r.prochaine_echeance) : '') + ' · max '+r.max_par_jour+'/jour, déjà '+r.deja_crees_aujourdhui;
+}
+async function drInit(){
+  try {
+    const [a, b] = await Promise.all([callFn('impact-drafts', { action:'status' }), callFn('relance-drafts', { action:'status' })]);
+    if (a.ok) { DR.impact = a.data; drUi('impact', a.data.eligibles ? 'ok' : 'warn', a.data.eligibles ? 'Prêt · '+a.data.eligibles+' éligibles' : 'Aucune ligne éligible');
+      if (a.data.last_run) $('impact-last').textContent = frDT(a.data.last_run.started_at); }
+    else drUi('impact', 'err', 'Indisponible');
+    if (b.ok) { DR.relance = b.data; if (b.data.last_run) $('relances-last').textContent = frDT(b.data.last_run.started_at); }
+    if (a.ok) $('tip-impact').innerHTML = '<b>'+a.data.eligibles+'</b> lignes éligibles (F commence par OK, G = Non contacté, H vide, nom et email valides, média avec modèle)';
+    if (b.ok) $('tip-relances').innerHTML = relTip(b.data);
+  } catch(e) { drUi('impact', 'err', 'Indisponible'); }
+}
+function drAsk(kind){
+  if (DR.busy) return;
+  const im = kind === 'impact', st = im ? DR.impact : DR.relance;
+  let info = '';
+  if (im) {
+    const pm = st && st.par_media ? Object.entries(st.par_media).map(([k,v]) => '<li>'+esc(k)+' : <b>'+v+'</b></li>').join('') : '';
+    info = '<div class="kv"><span>Lignes éligibles :</span> <b>'+(st ? st.eligibles : '?')+'</b></div>'+(pm ? '<ul>'+pm+'</ul>' : '')
+      + '<p class="mute" style="font-size:12.5px">Chaque brouillon = modèle validé du média + une phrase personnalisée (Gemini) à partir du produit / signal de la ligne. Contrôles avant création : nom de l\'entreprise, bon média, bon destinataire, longueur, aucun texte à compléter, aucun doublon dans Gmail. Les lignes qui ne passent pas sont mises de côté avec la raison. G passe à « Brouillons ok ».</p>';
+  } else {
+    info = st ? '<p>'+relTip(st)+'</p>' : '';
+    info += '<p class="mute" style="font-size:12.5px">Relance 1 uniquement (modèle officiel), dans le fil de l\'accroche. Avant chaque brouillon : aucune réponse, aucun RDV Calendly, aucun rebond, rien reçu du même domaine, pas de brouillon déjà présent. Pense à lancer SYNC avant. Google Agenda n\'est pas consulté : vérifie tes RDV du jour. G passe à « Relance 1 ».</p>';
+  }
+  $('syncres-in').innerHTML = '<h2>'+(im ? 'IMPACT · brouillons d\'accroche' : 'Relances · brouillons')+'</h2>'+info
+    + '<p style="font-size:12.5px"><b>Aucun mail n\'est envoyé.</b> Les brouillons apparaissent dans Gmail, tu les relis et tu les envoies toi-même.</p>'
+    + '<div class="btns"><button class="btn sec" id="sr-close">Annuler</button><button class="btn sec" id="dr-test">Test : 3 brouillons</button><button class="btn pri" id="dr-lot">Lot de 10</button></div>';
+  $('syncres').style.display = 'flex';
+  $('sr-close').onclick = () => $('syncres').style.display = 'none';
+  $('dr-test').onclick = () => drRun(kind, 3);
+  $('dr-lot').onclick = () => drRun(kind, 10);
+}
+async function drRun(kind, limit){
+  if (DR.busy) return; DR.busy = true;
+  const im = kind === 'impact', fn = im ? 'impact-drafts' : 'relance-drafts';
+  $('syncres').style.display = 'none';
+  drUi(kind, 'run', limit === 3 ? 'Test · 3 brouillons…' : 'Création des brouillons…');
+  window.addEventListener('beforeunload', warnLeave);
+  try {
+    let r;
+    try { r = await callFn(fn, { action:'run', limit }); } catch(e) { r = { ok:false, status:0, data:{ error:String(e.message||e) } }; }
+    if (r.status === 409 && r.data.need_auth) { showSyncMsg('Autorisation Google nécessaire', '<p>'+esc(r.data.error)+'</p><p class="mute">Clique sur SYNC pour reconnecter Google, puis relance.</p>'); return; }
+    if (!r.ok && !r.data.run_id) throw new Error(r.data.error || ('Erreur '+r.status));
+    await loadProspects();
+    drSummary(kind, r.data);
+  } catch(e) {
+    showSyncMsg(im ? 'IMPACT interrompu' : 'Relances interrompues', '<p>'+esc(e.message||e)+'</p><p class="mute">Si des brouillons ont été créés avant l\'erreur, ils sont dans le journal et le prochain lot repart des lignes restantes.</p>');
+  } finally { DR.busy = false; window.removeEventListener('beforeunload', warnLeave); await drInit(); }
+}
+function drSummary(kind, d){
+  const im = kind === 'impact', items = d.items || [], sk = d.skipped || [];
+  const kv = (l, v) => '<div class="kv"><span>'+l+' :</span> <b>'+v+'</b></div>';
+  let h = (d.error ? '<p style="color:#e08a82">'+esc(d.error)+'</p>' : '') + kv('Brouillons créés', nf(items.length)+(d.mode==='test' ? ' (test, max 3)' : ''));
+  if (items.length) h += '<div class="inc">'+items.map(x => '<div><b>'+esc(x.entreprise)+'</b> · '+esc(x.email)+' · '+esc(x.media||'')+(im && x.accroche ? '<br><span style="color:var(--tx)">« '+esc(x.accroche)+' »</span>' : '')+'</div>').join('')+'</div>';
+  h += kv('Lignes mises de côté', nf(sk.length));
+  if (sk.length) h += '<div class="inc">'+sk.map(x => '<div><b>'+esc(x.entreprise||'?')+'</b> · '+esc(x.email||'')+' — '+esc(x.raison)+'</div>').join('')+'</div>';
+  if (!im && d.anciennes_non_relancees) h += '<p class="mute" style="font-size:12px">'+nf(d.anciennes_non_relancees)+' accroches plus anciennes restent sans relance (non traitées : lot du jour seulement).</p>';
+  h += '<p class="mute" style="font-size:12px">Brouillons à relire dans Gmail. Rien n\'a été envoyé. '+(im ? 'G = « Brouillons ok » ; H sera rempli par SYNC quand tu enverras.' : 'G = « Relance 1 » ; la date (I) sera remplie par SYNC à l\'envoi.')+'</p>';
+  $('syncres-in').innerHTML = '<h2>'+(im ? 'IMPACT terminé' : 'Relances terminées')+'</h2>'+h
+    + '<div class="btns">'+(items.length && d.run_id ? '<button class="btn sec" id="dr-undo">Annuler ce lot</button>' : '')+'<button class="btn pri" id="sr-close">Fermer</button></div>';
+  $('syncres').style.display = 'flex';
+  $('sr-close').onclick = () => $('syncres').style.display = 'none';
+  if ($('dr-undo')) $('dr-undo').onclick = async () => {
+    if (!confirm('Supprimer les brouillons de ce lot encore non envoyés et remettre les statuts d\'avant ? Un brouillon déjà envoyé n\'est pas touché (signalé).')) return;
+    const r = await callFn(im ? 'impact-drafts' : 'relance-drafts', { action:'undo', run_id: d.run_id });
+    if (!r.ok) { toast('Annulation impossible : '+(r.data.error||r.status)); return; }
+    $('syncres').style.display = 'none';
+    await loadProspects(); await drInit();
+    toast(r.data.annules+' brouillon(s) supprimé(s)'+(r.data.deja_envoyes ? ', '+r.data.deja_envoyes+' déjà envoyé(s) laissé(s)' : '')+(r.data.statut_garde ? ', '+r.data.statut_garde+' statut(s) gardé(s)' : ''));
+  };
+}
+$('impact-btn').onclick = () => drAsk('impact');
+$('relances-btn').onclick = () => drAsk('relances');
 async function loadRowGmail(id){
   const box = $('p-gmail'); box.classList.add('hidden');
   const { data } = await sb.from('v_gmail_prospects').select('first_sent,n_envoyes,last_sent,first_reply,last_reply,n_recus,propal_at,rdv_at,rdv_annule,bounce_at').eq('prospect_id', id).maybeSingle();
